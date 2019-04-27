@@ -1,8 +1,17 @@
 """Provide fixtures for pytest-based unit tests."""
 
+import os
+import py
 import pytest
 
 from watson import Watson
+
+
+TEST_FIXTURE_DIR = py.path.local(
+    os.path.dirname(
+        os.path.realpath(__file__)
+        )
+    ) / 'resources'
 
 
 @pytest.fixture
