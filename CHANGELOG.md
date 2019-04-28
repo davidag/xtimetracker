@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `start` command now correctly checks if project is empty (#322)
 - The `report` and `aggregate` commands with `--json` option now correctly
   encode Arrow objects (#329)
+- Handle frames that cross boundaries in reports (#248)
+
+### Removed
+
+- Python 2.7 support.
 
 ## [1.8.0] - 2019-08-26
 
