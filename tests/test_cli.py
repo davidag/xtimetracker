@@ -37,6 +37,18 @@ class TestCliCmd:
         ('2018-04-10T12:30', '2018-04-10 12:30:00'),
         ('2018-04-10 12', '2018-04-10 12:00:00'),
         ('2018-04-10T12', '2018-04-10 12:00:00'),
+        (
+            '14:05:12',
+            arrow.now()
+            .replace(hour=14, minute=5, second=12)
+            .format('YYYY-MM-DD HH:mm:ss')
+        ),
+        (
+            '14:05',
+            arrow.now()
+            .replace(hour=14, minute=5, second=0)
+            .format('YYYY-MM-DD HH:mm:ss')
+        ),
     ]
 
     invalid_dates_data = [
@@ -54,9 +66,7 @@ class TestCliCmd:
         ('tomorrow'),
         ('14:05:12.000'),  # Times alone are not allowed
         ('140512.000'),
-        ('14:05:12'),
         ('140512'),
-        ('14:05'),
         ('14.05'),
         ('2018-04-10T'),
         ('2018-04-10T12:30:43.'),
@@ -168,16 +178,19 @@ class TestCliReportCmd(TestCliCmd):
 class TestCliStopCmd(TestCliCmd):
 
     valid_times_data = [
-        ('14:12:43', '2019-04-10 14:12:43'),
+        ('14:12'),
+        ('14:12:43'),
+        ('2019-04-10T14:12'),
+        ('2019-04-10T14:12:43'),
     ]
-    start_dt = datetime(2019, 4, 10, 14, tzinfo=tzlocal())
+    start_dt = datetime(2019, 4, 10, 14, 0, 0, tzinfo=tzlocal())
 
-    @pytest.mark.parametrize('test_dt,expected', valid_times_data)
-    def test_valid_time(self, mocker, watson, test_dt, expected):
+    @pytest.mark.parametrize('at_dt', valid_times_data)
+    def test_valid_time(self, mocker, watson, at_dt):
         mocker.patch('arrow.arrow.datetime', wraps=datetime)
         result = self._run_start(watson)
         assert result.exit_code == 0
-        result = self._run_stop(watson, test_dt)
+        result = self._run_stop(watson, at_dt)
         assert result.exit_code == 0
 
     def _run_start(self, watson):
