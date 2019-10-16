@@ -7,7 +7,7 @@ from dateutil.tz import tzlocal
 from click.testing import CliRunner
 import pytest
 
-from watson import cli
+from watson import cli, frames
 
 
 class TestCliCmd:
@@ -77,11 +77,18 @@ class TestCliCmd:
         return TestCliCmd.cli_runner.invoke(cmd, args, obj=watson)
 
     @staticmethod
-    def _run_cmd_from_to(watson, cmd, from_dt, to_dt):
+    def _run_cmd_from_to(watson, cmd, from_dt, to_dt, *extra_args):
+        args = []
+        if from_dt:
+            args += ['--from', from_dt]
+        if to_dt:
+            args += ['--to', to_dt]
+        for arg in extra_args:
+            args.append(arg)
         return TestCliCmd._run(
             watson,
             cmd,
-            ['--from', from_dt, '--to', to_dt]
+            args
         )
 
 
@@ -173,6 +180,12 @@ class TestCliReportCmd(TestCliCmd):
             watson, cli.report, test_dt, test_dt
         )
         assert result.exit_code != 0
+
+    def test_empty_json_output(self, mocker, watson):
+        result = TestCliCmd._run_cmd_from_to(
+            watson, cli.report, None, None, '--json'
+        )
+        assert result.exit_code == 0
 
 
 class TestCliStopCmd(TestCliCmd):
