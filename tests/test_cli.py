@@ -139,6 +139,12 @@ class TestCliAggregateCmd(TestCliCmd):
         )
         assert result.exit_code != 0
 
+    def test_empty_json_output(self, mocker, watson):
+        result = TestCliCmd._run_cmd_from_to(
+            watson, cli.aggregate, None, None, '--json'
+        )
+        assert result.exit_code == 0
+
 
 class TestCliLogCmd(TestCliCmd):
 
