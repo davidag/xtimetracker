@@ -9,7 +9,7 @@ Usage: $0 shell-type
 
 This script generates the auto completion receipt required by Bash or Zsh.
 Since the receipt is only a wrapper around the click framework, this results
-in correct tab completion, regardless of the Watson version.
+in correct tab completion, regardless of the tt version.
 
 The argument shell-type must be either "bash" or "zsh".
 EOF
@@ -18,7 +18,7 @@ EOF
 # Parse command line parameters
 if [[ $# -ne 1 ]]
 then
-  echo "Please provide exactly one input argument." >&2
+  print_help
   exit 1
 fi
 
@@ -35,11 +35,11 @@ case $1 in
     ;;
   bash)
     src_command="source"
-    dst_script="watson.completion"
+    dst_script="tt.completion"
     ;;
   zsh)
     src_command="source_zsh"
-    dst_script="watson.zsh-completion"
+    dst_script="tt.zsh-completion"
     ;;
   *)
     echo "Unknown argument '$1'. Please consult help text." >&2
@@ -55,6 +55,6 @@ if [[ "$inside_venv" == "0" ]]; then
     exit 1
 fi
 
-_WATSON_COMPLETE=$src_command watson > $dst_script
+_TT_COMPLETE=$src_command tt > $dst_script
 
 exit 0

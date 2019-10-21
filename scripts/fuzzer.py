@@ -7,7 +7,7 @@ import sys
 
 import arrow
 
-from watson import Watson
+from tt import Watson
 
 FUZZER_PROJECTS = [
     ("apollo11", ["reactor", "module", "wheels", "steering", "brakes"]),
@@ -33,7 +33,7 @@ def get_options():
     return options
 
 
-def fill_watson_randomly(watson, project_data, allow_all_tags):
+def fill_tt_randomly(watson, project_data, allow_all_tags):
     now = arrow.now()
 
     for date in arrow.Arrow.range('day', now.shift(months=-1), now):
