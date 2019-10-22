@@ -7,7 +7,7 @@ from dateutil.tz import tzlocal
 from click.testing import CliRunner
 import pytest
 
-from watson import cli, frames
+from watson import cli
 
 
 class TestCliCmd:

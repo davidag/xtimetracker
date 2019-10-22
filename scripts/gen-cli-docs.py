@@ -1,12 +1,10 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import inspect
 
 from click.core import Command, Context
 from click.formatting import HelpFormatter
 from watson import cli as watson_cli
-# from watson import watson
 
 
 class MarkdownFormatter(HelpFormatter):
