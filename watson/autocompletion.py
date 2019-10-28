@@ -1,6 +1,50 @@
+from functools import wraps
 from .utils import create_watson, parse_tags
 
 
+def get_rename_name(ctx, args, incomplete):
+    """
+    Function to return all projects or tasks matching the prefix
+
+    Depending on the specified rename_type, either a list of projects or a list
+    of tasks must be returned. This function takes care of this distinction and
+    returns the appropriate names.
+
+    If the passed in type is unknown, e.g. due to a typo, an empty completion
+    is generated.
+    """
+
+    in_type = ctx.params["rename_type"]
+    if in_type == "project":
+        return get_projects(ctx, args, incomplete)
+    elif in_type == "tag":
+        return get_tags(ctx, args, incomplete)
+
+    return []
+
+
+def get_rename_types(ctx, args, incomplete):
+    """Function to return all rename types matching the prefix."""
+    for cur_type in "project", "tag":
+        if cur_type.startswith(incomplete):
+            yield cur_type
+
+
+def patch_click_ctx_object(func):
+    # When pallets/click#942 is fixed, this won't be needed...
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if len(args) > 0:
+            ctx = args[0]
+        elif 'ctx' in kwargs:
+            ctx = kwargs['ctx']
+        if ctx.obj is None:
+            ctx.obj = create_watson()
+        return func(*args, **kwargs)
+    return wrapper
+
+
+@patch_click_ctx_object
 def get_project_or_task_completion(ctx, args, incomplete):
     """Function to autocomplete either organisations or tasks, depending on the
        shape of the current argument."""
@@ -38,10 +82,6 @@ def get_project_or_task_completion(ctx, args, incomplete):
         for cur_suggestion in tag_suggestions:
             yield "+{cur_suggestion}".format(cur_suggestion=cur_suggestion)
 
-    # When pallets/click#942 is fixed, this won't be needed...
-    if ctx.obj is None:
-        ctx.obj = create_watson()
-
     project_is_completed = any(
         tok.startswith("+") for tok in args + [incomplete]
     )
@@ -54,6 +94,7 @@ def get_project_or_task_completion(ctx, args, incomplete):
         return get_projects(ctx, args, incomplete)
 
 
+@patch_click_ctx_object
 def get_projects(ctx, args, incomplete):
     """Function to return all projects matching the prefix."""
     watson = ctx.obj
@@ -62,34 +103,7 @@ def get_projects(ctx, args, incomplete):
             yield cur_project
 
 
-def get_rename_name(ctx, args, incomplete):
-    """
-    Function to return all projects or tasks matching the prefix
-
-    Depending on the specified rename_type, either a list of projects or a list
-    of tasks must be returned. This function takes care of this distinction and
-    returns the appropriate names.
-
-    If the passed in type is unknown, e.g. due to a typo, an empty completion
-    is generated.
-    """
-
-    in_type = ctx.params["rename_type"]
-    if in_type == "project":
-        return get_projects(ctx, args, incomplete)
-    elif in_type == "tag":
-        return get_tags(ctx, args, incomplete)
-
-    return []
-
-
-def get_rename_types(ctx, args, incomplete):
-    """Function to return all rename types matching the prefix."""
-    for cur_type in "project", "tag":
-        if cur_type.startswith(incomplete):
-            yield cur_type
-
-
+@patch_click_ctx_object
 def get_tags(ctx, args, incomplete):
     """Function to return all tags matching the prefix."""
     watson = ctx.obj
@@ -98,6 +112,7 @@ def get_tags(ctx, args, incomplete):
             yield cur_tag
 
 
+@patch_click_ctx_object
 def get_frames(ctx, args, incomplete):
     """
     Return all matching frame IDs

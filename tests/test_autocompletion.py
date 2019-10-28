@@ -5,6 +5,7 @@ from argparse import Namespace
 
 import pytest
 
+from watson import Watson
 from watson.autocompletion import (
     get_frames,
     get_project_or_task_completion,
@@ -152,3 +153,19 @@ def test_completion_of_existing_prefix(
 def test_for_known_completion_values(func_to_test, prefix, expected_vals):
     ret_list = list(func_to_test(None, [], prefix))
     assert ret_list == expected_vals
+
+
+@pytest.mark.parametrize("func", [
+    get_projects, get_tags, get_frames, get_project_or_task_completion])
+def test_watson_object_gets_created_if_empty_with_positional_args(func):
+    ctx = ClickContext(obj=None)
+    func(ctx, [], "")
+    assert isinstance(ctx.obj, Watson)
+
+
+@pytest.mark.parametrize("func", [
+    get_projects, get_tags, get_frames, get_project_or_task_completion])
+def test_watson_object_gets_created_if_empty_with_keyword_args(func):
+    ctx = ClickContext(obj=None)
+    func(ctx=ctx, args=[], incomplete="")
+    assert isinstance(ctx.obj, Watson)
