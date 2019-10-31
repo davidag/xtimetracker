@@ -157,19 +157,17 @@ class Frames(object):
     ):
 
         for frame in self._rows:
-            if projects is not None and frame.project not in projects:
+            if projects and frame.project not in projects:
                 continue
-            if ignore_projects is not None and\
-               frame.project in ignore_projects:
-                continue
-
-            if tags is not None and not any(tag in frame.tags for tag in tags):
-                continue
-            if ignore_tags is not None and\
-               any(tag in frame.tags for tag in ignore_tags):
+            if ignore_projects and frame.project in ignore_projects:
                 continue
 
-            if span is None:
+            if tags and not any(tag in frame.tags for tag in tags):
+                continue
+            if ignore_tags and any(tag in frame.tags for tag in ignore_tags):
+                continue
+
+            if not span:
                 yield frame
             elif frame in span:
                 yield frame
