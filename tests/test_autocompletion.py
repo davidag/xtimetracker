@@ -8,7 +8,7 @@ import pytest
 from watson import Watson
 from watson.autocompletion import (
     get_frames,
-    get_project_or_task_completion,
+    get_project_or_tag_completion,
     get_projects,
     get_rename_name,
     get_rename_types,
@@ -34,8 +34,8 @@ ClickContext = Namespace
     "func_to_test, rename_type, args",
     [
         (get_frames, None, []),
-        (get_project_or_task_completion, None, ["project1", "+tag1"]),
-        (get_project_or_task_completion, None, []),
+        (get_project_or_tag_completion, None, ["project1", "+tag1"]),
+        (get_project_or_tag_completion, None, []),
         (get_projects, None, []),
         (get_rename_name, "project", []),
         (get_rename_name, "tag", []),
@@ -57,8 +57,8 @@ def test_if_returned_values_are_distinct(
     "func_to_test, n_expected_returns, rename_type, args",
     [
         (get_frames, N_FRAMES, None, []),
-        (get_project_or_task_completion, N_TASKS, None, ["project1", "+"]),
-        (get_project_or_task_completion, N_PROJECTS, None, []),
+        (get_project_or_tag_completion, N_TASKS, None, ["project1", "+"]),
+        (get_project_or_tag_completion, N_PROJECTS, None, []),
         (get_projects, N_PROJECTS, None, []),
         (get_rename_name, N_PROJECTS, "project", []),
         (get_rename_name, N_TASKS, "tag", []),
@@ -80,9 +80,9 @@ def test_if_empty_prefix_returns_everything(
     "func_to_test, rename_type, args",
     [
         (get_frames, None, []),
-        (get_project_or_task_completion, None, ["project1", "+"]),
-        (get_project_or_task_completion, None, ["project1", "+tag1", "+"]),
-        (get_project_or_task_completion, None, []),
+        (get_project_or_tag_completion, None, ["project1", "+"]),
+        (get_project_or_tag_completion, None, ["project1", "+tag1", "+"]),
+        (get_project_or_tag_completion, None, []),
         (get_projects, None, []),
         (get_rename_name, "project", []),
         (get_rename_name, "tag", []),
@@ -105,15 +105,15 @@ def test_completion_of_nonexisting_prefix(
     [
         (get_frames, "f4f7", N_FRAME_IDS_FOR_PREFIX, None, []),
         (
-            get_project_or_task_completion,
+            get_project_or_tag_completion,
             "+tag",
             N_TASKS,
             None,
             ["project1", "+tag3"],
         ),
-        (get_project_or_task_completion, "+tag", N_TASKS, None, ["project1"]),
+        (get_project_or_tag_completion, "+tag", N_TASKS, None, ["project1"]),
         (
-            get_project_or_task_completion,
+            get_project_or_tag_completion,
             "project3",
             N_VARIATIONS_OF_PROJECT3,
             None,
@@ -156,7 +156,7 @@ def test_for_known_completion_values(func_to_test, prefix, expected_vals):
 
 
 @pytest.mark.parametrize("func", [
-    get_projects, get_tags, get_frames, get_project_or_task_completion])
+    get_projects, get_tags, get_frames, get_project_or_tag_completion])
 def test_watson_object_gets_created_if_empty_with_positional_args(func):
     ctx = ClickContext(obj=None)
     func(ctx, [], "")
@@ -164,7 +164,7 @@ def test_watson_object_gets_created_if_empty_with_positional_args(func):
 
 
 @pytest.mark.parametrize("func", [
-    get_projects, get_tags, get_frames, get_project_or_task_completion])
+    get_projects, get_tags, get_frames, get_project_or_tag_completion])
 def test_watson_object_gets_created_if_empty_with_keyword_args(func):
     ctx = ClickContext(obj=None)
     func(ctx=ctx, args=[], incomplete="")

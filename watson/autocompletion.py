@@ -45,7 +45,7 @@ def patch_click_ctx_object(func):
 
 
 @patch_click_ctx_object
-def get_project_or_task_completion(ctx, args, incomplete):
+def get_project_or_tag_completion(ctx, args, incomplete):
     """Function to autocomplete either organisations or tasks, depending on the
        shape of the current argument."""
 
@@ -72,7 +72,7 @@ def get_project_or_task_completion(ctx, args, incomplete):
         Prepend '+' to each tag suggestion.
 
         For the `watson` targeted with the function
-        get_project_or_task_completion, a leading plus in front of a tag is
+        get_project_or_tag_completion, a leading plus in front of a tag is
         expected. The get_tags() suggestion generation does not include those
         as it targets other subcommands.
 

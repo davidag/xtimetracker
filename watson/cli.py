@@ -12,7 +12,7 @@ from dateutil import tz
 import watson as _watson
 from .autocompletion import (
     get_frames,
-    get_project_or_task_completion,
+    get_project_or_tag_completion,
     get_projects,
     get_rename_name,
     get_rename_types,
@@ -176,7 +176,7 @@ def _start(watson, project, tags, restart=False, gap=True):
               help=("(Don't) leave gap between end time of previous project "
                     "and start time of the current."))
 @click.argument('args', nargs=-1,
-                autocompletion=get_project_or_task_completion)
+                autocompletion=get_project_or_tag_completion)
 @click.option('-c', '--confirm-new-project', is_flag=True, default=False,
               help="Confirm addition of new project.")
 @click.option('-b', '--confirm-new-tag', is_flag=True, default=False,
@@ -1122,7 +1122,7 @@ def frames(watson):
 
 @cli.command(context_settings={'ignore_unknown_options': True})
 @click.argument('args', nargs=-1,
-                autocompletion=get_project_or_task_completion)
+                autocompletion=get_project_or_tag_completion)
 @click.option('-f', '--from', 'from_', required=True, type=DateTime,
               help="Date and time of start of tracked activity")
 @click.option('-t', '--to', required=True, type=DateTime,
