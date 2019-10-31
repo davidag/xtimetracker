@@ -677,11 +677,11 @@ def test_projects(watson):
     for name in ('foo', 'bar', 'bar', 'bar', 'foo', 'lol'):
         watson.frames.add(name, 4000, 4000)
 
-    assert watson.projects == ['bar', 'foo', 'lol']
+    assert watson.projects() == ['bar', 'foo', 'lol']
 
 
 def test_projects_no_frames(watson):
-    assert watson.projects == []
+    assert watson.projects() == []
 
 
 # tags

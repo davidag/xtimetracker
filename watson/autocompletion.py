@@ -98,7 +98,7 @@ def get_project_or_task_completion(ctx, args, incomplete):
 def get_projects(ctx, args, incomplete):
     """Function to return all projects matching the prefix."""
     watson = ctx.obj
-    for cur_project in watson.projects:
+    for cur_project in watson.projects():
         if cur_project.startswith(incomplete):
             yield cur_project
 

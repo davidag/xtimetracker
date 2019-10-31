@@ -9,6 +9,8 @@ import pytest
 
 from watson import cli
 
+from . import TEST_FIXTURE_DIR
+
 
 class TestCliCmd:
 
@@ -224,3 +226,28 @@ class TestCliStopCmd(TestCliCmd):
         )
         # The --at parameter is the only option that uses 'TimeParamType'
         return TestCliCmd._run(watson, cli.stop, ['--at', at_dt])
+
+
+class TestCliProjectsCmd(TestCliCmd):
+    @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+    @pytest.mark.parametrize('tag, projects', [
+        ('antenna', ['voyager1', 'voyager2']),
+        ('reactor', ['apollo11']),
+        ('lens', ['hubble']),
+        ])
+    def test_filter_by_tag(self, watson_df, tag, projects):
+        result = TestCliCmd._run(watson_df, cli.projects, [tag])
+        assert result.exit_code == 0
+        assert set(result.output.splitlines()) == set(projects)
+
+    @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+    @pytest.mark.parametrize('tags, projects', [
+        (['probe', 'sensors', 'antenna'], ['voyager1', 'voyager2']),
+        (['probe', 'orbiter', 'sensors', 'antenna'], ['voyager2']),
+        (['reactor', 'brakes'], ['apollo11']),
+        (['lens', 'reactor'], []),
+        ])
+    def test_filter_by_multiple_tags(self, watson_df, tags, projects):
+        result = TestCliCmd._run(watson_df, cli.projects, tags)
+        assert result.exit_code == 0
+        assert set(result.output.splitlines()) == set(projects)

@@ -212,7 +212,7 @@ def start(ctx, watson, confirm_new_project, confirm_new_tag, args, gap_=True):
     # Confirm creation of new project if that option is set
     if (watson.config.getboolean('options', 'confirm_new_project') or
             confirm_new_project):
-        confirm_project(project, watson.projects)
+        confirm_project(project, watson.projects())
 
     # Parse all the tags
     tags = parse_tags(args)
@@ -1060,22 +1060,22 @@ def log(watson, current, from_, to, projects, tags, year, month, week, day,
 
 
 @cli.command()
+@click.argument('tags', nargs=-1,
+                autocompletion=get_tags)
 @click.pass_obj
 @catch_watson_error
-def projects(watson):
+def projects(watson, tags):
     """
-    Display the list of all the existing projects.
+    Display the list of all the existing projects, or only those matching all
+    the provided tag(s).
 
-    Example:
-
+    Examples:
     \b
     $ watson projects
-    apollo11
-    hubble
-    voyager1
-    voyager2
+    $ watson projects tag1
+    $ watson projects other-tag 'multi word tag'
     """
-    for project in watson.projects:
+    for project in watson.projects(tags):
         click.echo(style('project', project))
 
 
@@ -1160,7 +1160,7 @@ def add(watson, args, from_, to, confirm_new_project, confirm_new_tag):
     # Confirm creation of new project if that option is set
     if (watson.config.getboolean('options', 'confirm_new_project') or
             confirm_new_project):
-        confirm_project(project, watson.projects)
+        confirm_project(project, watson.projects())
 
     # Parse all the tags
     tags = parse_tags(args)
@@ -1255,7 +1255,7 @@ def edit(watson, confirm_new_project, confirm_new_tag, id):
             # Confirm creation of new project if that option is set
             if (watson.config.getboolean('options', 'confirm_new_project') or
                     confirm_new_project):
-                confirm_project(project, watson.projects)
+                confirm_project(project, watson.projects())
             tags = data['tags']
             # Confirm creation of new tag(s) if that option is set
             if (watson.config.getboolean('options', 'confirm_new_tag') or

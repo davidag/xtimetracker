@@ -6,6 +6,7 @@ import uuid
 import configparser
 import arrow
 import click
+from collections import defaultdict
 from functools import reduce
 
 from .config import ConfigParser
@@ -296,12 +297,20 @@ class Watson(object):
         self.current = None
         return old_current
 
-    @property
-    def projects(self):
+    def projects(self, tags=None):
         """
         Return the list of all the existing projects, sorted by name.
         """
-        return sorted(set(self.frames['project']))
+        frames = self.frames.filter(tags=tags)
+        matched_tags = defaultdict(set)
+        projects = set()
+        for f in frames:
+            for t in f.tags:
+                matched_tags[t].add(f.project)
+            projects.add(f.project)
+        return sorted(
+            p for p in projects
+            if not tags or all(p in matched_tags[t] for t in tags))
 
     @property
     def tags(self):
@@ -535,7 +544,7 @@ class Watson(object):
 
     def rename_project(self, old_project, new_project):
         """Rename a project in all affected frames."""
-        if old_project not in self.projects:
+        if old_project not in self.projects():
             raise WatsonError('Project "%s" does not exist' % old_project)
 
         updated_at = arrow.utcnow()
