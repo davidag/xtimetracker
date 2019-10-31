@@ -1080,30 +1080,23 @@ def projects(watson, tags):
 
 
 @cli.command()
+@click.argument('projects', nargs=-1,
+                autocompletion=get_projects)
 @click.pass_obj
 @catch_watson_error
-def tags(watson):
+def tags(watson, projects):
     """
-    Display the list of all the tags.
+    Display the list of all the tags, or only those matching all the provided
+    projects.
 
-    Example:
+    Examples:
 
     \b
     $ watson tags
-    antenna
-    brakes
-    camera
-    generators
-    lens
-    module
-    probe
-    reactor
-    sensors
-    steering
-    transmission
-    wheels
+    $ watson tags a-project
+    $ watson tags other-project 'muti word project'
     """
-    for tag in watson.tags:
+    for tag in watson.tags(projects):
         click.echo(style('tag', tag))
 
 

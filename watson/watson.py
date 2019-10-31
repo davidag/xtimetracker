@@ -312,12 +312,20 @@ class Watson(object):
             p for p in projects
             if not tags or all(p in matched_tags[t] for t in tags))
 
-    @property
-    def tags(self):
+    def tags(self, projects=None):
         """
         Return the list of the tags, sorted by name.
         """
-        return sorted(set(tag for tags in self.frames['tags'] for tag in tags))
+        frames = self.frames.filter(projects=projects)
+        matched_projects = defaultdict(set)
+        tags = set()
+        for f in frames:
+            for t in f.tags:
+                matched_projects[f.project].add(t)
+                tags.add(t)
+        return sorted(
+            t for t in tags
+            if not projects or all(t in matched_projects[p] for p in projects))
 
     def _get_request_info(self, route):
         config = self.config
@@ -561,7 +569,7 @@ class Watson(object):
 
     def rename_tag(self, old_tag, new_tag):
         """Rename a tag in all affected frames."""
-        if old_tag not in self.tags:
+        if old_tag not in self.tags():
             raise WatsonError('Tag "%s" does not exist' % old_tag)
 
         updated_at = arrow.utcnow()

@@ -698,11 +698,11 @@ def test_tags(watson):
     for name, tags in samples:
         watson.frames.add(name, 4000, 4000, tags)
 
-    assert watson.tags == ['A', 'B', 'C', 'D']
+    assert watson.tags() == ['A', 'B', 'C', 'D']
 
 
 def test_tags_no_frames(watson):
-    assert watson.tags == []
+    assert watson.tags() == []
 
 
 # merge

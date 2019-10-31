@@ -107,7 +107,7 @@ def get_projects(ctx, args, incomplete):
 def get_tags(ctx, args, incomplete):
     """Function to return all tags matching the prefix."""
     watson = ctx.obj
-    for cur_tag in watson.tags:
+    for cur_tag in watson.tags():
         if cur_tag.startswith(incomplete):
             yield cur_tag
 

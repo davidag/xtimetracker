@@ -1,11 +1,11 @@
 import re
-import arrow
 from itertools import combinations
 from datetime import datetime, timedelta
 from dateutil.tz import tzlocal
 
-from click.testing import CliRunner
+import arrow
 import pytest
+from click.testing import CliRunner
 
 from watson import cli
 
@@ -251,3 +251,40 @@ class TestCliProjectsCmd(TestCliCmd):
         result = TestCliCmd._run(watson_df, cli.projects, tags)
         assert result.exit_code == 0
         assert set(result.output.splitlines()) == set(projects)
+
+
+class TestCliTagsCmd(TestCliCmd):
+    @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+    @pytest.mark.parametrize('all_tags', [
+        (['reactor', 'module', 'wheels', 'steering', 'brakes', 'lens',
+          'camera', 'transmission', 'probe', 'generators', 'sensors',
+          'antenna', 'orbiter']),
+        ])
+    def test_no_filtering(self, watson_df, all_tags):
+        result = TestCliCmd._run(watson_df, cli.tags, '')
+        assert result.exit_code == 0
+        assert set(result.output.splitlines()) == set(all_tags)
+
+    @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+    @pytest.mark.parametrize('project, tags', [
+        ('', ['reactor', 'module', 'wheels', 'steering', 'brakes', 'lens',
+              'camera', 'transmission', 'probe', 'generators', 'sensors',
+              'antenna', 'orbiter']),
+        ('voyager1', ['probe', 'generators', 'sensors', 'antenna']),
+        ('voyager2', ['probe', 'orbiter', 'sensors', 'antenna']),
+        ])
+    def test_filter_by_project(self, watson_df, project, tags):
+        result = TestCliCmd._run(watson_df, cli.tags, project)
+        assert result.exit_code == 0
+        assert set(result.output.splitlines()) == set(tags)
+
+    @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+    @pytest.mark.parametrize('projects, tags', [
+        (['voyager1', 'voyager2'], ['probe', 'sensors', 'antenna']),
+        (['hubble', 'apollo11'], []),
+        (['voyager1', 'apollo11'], []),
+        ])
+    def test_filter_by_multiple_projects(self, watson_df, projects, tags):
+        result = TestCliCmd._run(watson_df, cli.tags, projects)
+        assert result.exit_code == 0
+        assert set(result.output.splitlines()) == set(tags)
