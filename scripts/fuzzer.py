@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
-import arrow
+import argparse
 import random
 import os
 import sys
+
+import arrow
 
 from watson import Watson
 
@@ -11,25 +13,27 @@ FUZZER_PROJECTS = [
     ("apollo11", ["reactor", "module", "wheels", "steering", "brakes"]),
     ("hubble", ["lens", "camera", "transmission"]),
     ("voyager1", ["probe", "generators", "sensors", "antenna"]),
-    ("voyager2", ["probe", "generators", "sensors", "antenna"]),
+    ("voyager2", ["probe", "orbiter", "sensors", "antenna"]),
 ]
 
 
-def get_config_dir():
-    if len(sys.argv) == 2:
-        if not os.path.isdir(sys.argv[1]):
-            sys.exit("Invalid directory argument")
-        return sys.argv[1]
-    elif os.environ.get('WATSON_DIR'):
-        return os.environ.get('WATSON_DIR')
-    else:
-        sys.exit(
-            "This script will corrupt Watson's data, please set the WATSON_DIR"
-            " environment variable to safely use it for development purpose."
-        )
+def get_options():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-p",
+        "--path",
+        default=".",
+        help="The path to put generated frames file (default: current dir)")
+    parser.add_argument(
+        "--allow-all-tags",
+        default=False,
+        action="store_true",
+        help="Allow to associate all tags to a project frame")
+    options = parser.parse_args()
+    return options
 
 
-def fill_watson_randomly(watson, project_data):
+def fill_watson_randomly(watson, project_data, allow_all_tags):
     now = arrow.now()
 
     for date in arrow.Arrow.range('day', now.shift(months=-1), now):
@@ -42,17 +46,20 @@ def fill_watson_randomly(watson, project_data):
 
         while start.hour < random.randint(16, 19):
             project, tags = random.choice(project_data)
+            max_tags = len(tags) if allow_all_tags else len(tags) - 1
+            frame_tags = random.sample(tags, random.randint(0, max_tags))
             frame = watson.frames.add(
                 project,
                 start,
                 start.shift(seconds=random.randint(60, 4 * 60 * 60)),
-                tags=random.sample(tags, random.randint(0, len(tags)))
-            )
+                tags=frame_tags)
             start = frame.stop.shift(seconds=random.randint(0, 1 * 60 * 60))
 
 
 if __name__ == '__main__':
-    config_dir = get_config_dir()
-    watson = Watson(config_dir=config_dir, frames=None, current=None)
-    fill_watson_randomly(watson, FUZZER_PROJECTS)
+    options = get_options()
+    if not os.path.isdir(options.path):
+        sys.exit("Invalid directory argument")
+    watson = Watson(config_dir=options.path, frames=None, current=None)
+    fill_watson_randomly(watson, FUZZER_PROJECTS, options.allow_all_tags)
     watson.save()
