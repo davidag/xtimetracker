@@ -445,7 +445,7 @@ _SHORTCUT_OPTIONS_VALUES = {
               flag_value=_SHORTCUT_OPTIONS_VALUES['day'],
               mutually_exclusive=['week', 'month', 'year', 'all'],
               help='Reports activity for the current day.')
-@click.option('-a', '--all', cls=MutuallyExclusiveOption, type=DateTime,
+@click.option('-l', '--all', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['all'],
               mutually_exclusive=['day', 'week', 'month', 'year'],
               help='Reports all activities.')
@@ -453,18 +453,17 @@ _SHORTCUT_OPTIONS_VALUES = {
               multiple=True,
               help="Reports activity only for the given project. You can add "
               "other projects by using this option several times.")
-@click.option('-T', '--tag', 'tags', autocompletion=get_tags, multiple=True,
+@click.option('-P', '--exclude-project', 'exclude_projects', multiple=True,
+              help="Reports activity for all projects but the given ones. You "
+              "can exclude several projects by using the option multiple "
+              "times.")
+@click.option('-a', '--tag', 'tags', autocompletion=get_tags, multiple=True,
               help="Reports activity only for frames containing the given "
               "tag. You can add several tags by using this option multiple "
               "times")
-@click.option('--ignore-project', 'ignore_projects', multiple=True,
-              help="Reports activity for all projects but the given ones. You "
-              "can ignore several projects by using the option multiple "
-              "times. Any given project will be ignored")
-@click.option('--ignore-tag', 'ignore_tags', multiple=True,
+@click.option('-A', '--exclude-tag', 'exclude_tags', multiple=True,
               help="Reports activity for all tags but the given ones. You can "
-              "ignore several tags by using the option multiple times. Any "
-              "given tag will be ignored")
+              "exclude several tags by using the option multiple times.")
 @click.option('-j', '--json', 'output_format', cls=MutuallyExclusiveOption,
               flag_value='json', mutually_exclusive=['csv'],
               multiple=True,
@@ -481,8 +480,8 @@ _SHORTCUT_OPTIONS_VALUES = {
               help="(Don't) view output through a pager.")
 @click.pass_obj
 @catch_watson_error
-def report(watson, current, from_, to, projects, tags, ignore_projects,
-           ignore_tags, year, month, week, day, all, output_format,
+def report(watson, current, from_, to, projects, tags, exclude_projects,
+           exclude_tags, year, month, week, day, all, output_format,
            pager, aggregated=False, include_partial_frames=True):
     """
     Display a report of the time spent on each project.
@@ -500,8 +499,8 @@ def report(watson, current, from_, to, projects, tags, ignore_projects,
     respectively.
 
     You can limit the report to a project or a tag using the `--project`,
-    `--tag`, `--ignore-project` and `--ignore-tag` options. They can be
-    specified several times each to add or ignore multiple projects or
+    `--tag`, `--exclude-project` and `--exclude-tag` options. They can be
+    specified several times each to include/exclude multiple projects or
     tags to the report.
 
     If you are outputting to the terminal, you can selectively enable a pager
@@ -596,7 +595,7 @@ def report(watson, current, from_, to, projects, tags, ignore_projects,
         tab = ''
 
     report = watson.report(from_, to, current, projects, tags,
-                           ignore_projects, ignore_tags,
+                           exclude_projects, exclude_tags,
                            year=year, month=month, week=week, day=day,
                            all=all,
                            include_partial_frames=include_partial_frames)
@@ -716,7 +715,7 @@ def report(watson, current, from_, to, projects, tags, ignore_projects,
               multiple=True,
               help="Reports activity only for the given project. You can add "
               "other projects by using this option several times.")
-@click.option('-T', '--tag', 'tags', autocompletion=get_tags, multiple=True,
+@click.option('-a', '--tag', 'tags', autocompletion=get_tags, multiple=True,
               help="Reports activity only for frames containing the given "
               "tag. You can add several tags by using this option multiple "
               "times")
@@ -869,16 +868,16 @@ def aggregate(ctx, watson, current, from_, to, projects, tags, output_format,
               flag_value=_SHORTCUT_OPTIONS_VALUES['day'],
               mutually_exclusive=['week', 'month', 'year', 'all'],
               help='Reports activity for the current day.')
-@click.option('-a', '--all', cls=MutuallyExclusiveOption, type=DateTime,
+@click.option('-l', '--all', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['all'],
               mutually_exclusive=['day', 'week', 'month', 'year'],
               help='Reports all activities.')
 @click.option('-p', '--project', 'projects', autocompletion=get_projects,
               multiple=True,
-              help="Logs activity only for the given project. You can add "
+              help="Reports activity only for the given project. You can add "
               "other projects by using this option several times.")
-@click.option('-T', '--tag', 'tags', autocompletion=get_tags, multiple=True,
-              help="Logs activity only for frames containing the given "
+@click.option('-a', '--tag', 'tags', autocompletion=get_tags, multiple=True,
+              help="Reports activity only for frames containing the given "
               "tag. You can add several tags by using this option multiple "
               "times")
 @click.option('-j', '--json', 'output_format', cls=MutuallyExclusiveOption,
