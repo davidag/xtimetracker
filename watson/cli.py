@@ -22,6 +22,7 @@ from .frames import Frame
 from .utils import (
     apply_weekday_offset,
     build_csv,
+    build_json,
     confirm_project,
     confirm_tags,
     create_watson,
@@ -31,11 +32,11 @@ from .utils import (
     frames_to_json,
     get_frame_from_argument,
     get_start_time_for_period,
-    options, safe_save,
+    options,
+    safe_save,
     sorted_groupby,
     style,
     parse_tags,
-    json_arrow_encoder,
 )
 
 
@@ -607,8 +608,7 @@ def report(watson, current, from_, to, projects, tags, ignore_projects,
                            include_partial_frames=include_partial_frames)
 
     if 'json' in output_format and not aggregated:
-        click.echo(json.dumps(report, indent=4, sort_keys=True,
-                              default=json_arrow_encoder))
+        click.echo(build_json(report))
         return
     elif 'csv' in output_format and not aggregated:
         click.echo(build_csv(flatten_report_for_csv(report)))
@@ -839,8 +839,7 @@ def aggregate(ctx, watson, current, from_, to, projects, tags, output_format,
             lines.append('\n'.join(output))
 
     if 'json' in output_format:
-        click.echo(json.dumps(lines, indent=4, sort_keys=True,
-                   default=json_arrow_encoder))
+        click.echo(build_json(lines))
     elif 'csv' in output_format:
         click.echo(build_csv(lines))
     elif pager or (pager is None and
