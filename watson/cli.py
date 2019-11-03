@@ -480,7 +480,7 @@ _SHORTCUT_OPTIONS_VALUES = {
               help="(Don't) view output through a pager.")
 @click.pass_obj
 @catch_watson_error
-def report(watson, current, from_, to, projects, tags, exclude_projects,
+def report(watson, current, from_, to, projects, exclude_projects, tags,
            exclude_tags, year, month, week, day, all, output_format,
            pager, aggregated=False, include_partial_frames=True):
     """
@@ -715,10 +715,17 @@ def report(watson, current, from_, to, projects, tags, exclude_projects,
               multiple=True,
               help="Reports activity only for the given project. You can add "
               "other projects by using this option several times.")
+@click.option('-P', '--exclude-project', 'exclude_projects', multiple=True,
+              help="Reports activity for all projects but the given ones. You "
+              "can exclude several projects by using the option multiple "
+              "times.")
 @click.option('-a', '--tag', 'tags', autocompletion=get_tags, multiple=True,
               help="Reports activity only for frames containing the given "
               "tag. You can add several tags by using this option multiple "
               "times")
+@click.option('-A', '--exclude-tag', 'exclude_tags', multiple=True,
+              help="Reports activity for all tags but the given ones. You can "
+              "exclude several tags by using the option multiple times.")
 @click.option('-j', '--json', 'output_format', cls=MutuallyExclusiveOption,
               flag_value='json', mutually_exclusive=['csv'],
               multiple=True,
@@ -736,8 +743,8 @@ def report(watson, current, from_, to, projects, tags, exclude_projects,
 @click.pass_obj
 @click.pass_context
 @catch_watson_error
-def aggregate(ctx, watson, current, from_, to, projects, tags, output_format,
-              pager):
+def aggregate(ctx, watson, current, from_, to, projects, exclude_projects,
+              tags, exclude_tags, output_format, pager):
     """
     Display a report of the time spent on each project aggregated by day.
 
@@ -814,7 +821,10 @@ def aggregate(ctx, watson, current, from_, to, projects, tags, output_format,
         offset = datetime.timedelta(days=i)
         from_offset = from_ + offset
         output = ctx.invoke(report, current=current, from_=from_offset,
-                            to=from_offset, projects=projects, tags=tags,
+                            to=from_offset, projects=projects,
+                            exclude_projects=exclude_projects,
+                            tags=tags,
+                            exclude_tags=exclude_tags,
                             output_format=output_format,
                             pager=pager, aggregated=True,
                             include_partial_frames=True)
