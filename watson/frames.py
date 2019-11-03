@@ -153,7 +153,6 @@ class Frames(object):
         ignore_projects=None,
         ignore_tags=None,
         span=None,
-        include_partial_frames=False,
     ):
 
         for frame in self._rows:
@@ -171,7 +170,7 @@ class Frames(object):
                 yield frame
             elif frame in span:
                 yield frame
-            elif include_partial_frames and span.overlaps(frame):
+            elif span.overlaps(frame):
                 # If requested, return the part of the frame that is within the
                 # span, for frames that are *partially* within span or reaching
                 # over span

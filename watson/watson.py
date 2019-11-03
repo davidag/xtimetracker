@@ -461,8 +461,7 @@ class Watson(object):
 
     def report(self, from_, to, current=None, projects=None, tags=None,
                ignore_projects=None, ignore_tags=None, year=None,
-               month=None, week=None, day=None, fullspan=None,
-               include_partial_frames=False):
+               month=None, week=None, day=None, fullspan=None):
         for start_time in (_ for _ in [day, week, month, year,  fullspan]
                            if _ is not None):
             from_ = start_time
@@ -492,7 +491,7 @@ class Watson(object):
                 projects=projects or None, tags=tags or None,
                 ignore_projects=ignore_projects or None,
                 ignore_tags=ignore_tags or None,
-                span=span, include_partial_frames=include_partial_frames,
+                span=span,
             ),
             operator.attrgetter('project')
         )

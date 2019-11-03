@@ -812,22 +812,15 @@ def test_report_current(mocker, config_dir):
 
 
 @pytest.mark.parametrize(
-    "date_as_unixtime,include_partial,sum_", (
-        (3600 * 24, False, 0.0),
-        (3600 * 48, False, 0.0),
-        (3600 * 24, True, 7200.0),
-        (3600 * 48, True, 3600.0),
+    "date_as_unixtime,sum_", (
+        (3600 * 24, 7200.0),
+        (3600 * 48, 3600.0),
     )
 )
-def test_report_include_partial_frames(mocker, watson, date_as_unixtime,
-                                       include_partial, sum_):
+def test_report_include_partial_frames(mocker, watson, date_as_unixtime, sum_):
     """Test report building with frames that cross report boundaries
 
-    1 event is added that has 2 hours in one day and 1 in the next. The
-    parametrization checks that the report for both days is empty with
-    `include_partial=False` and report the correct amount of hours with
-    `include_partial=False`
-
+    1 event is added that has 2 hours in one day and 1 in the next.
     """
     content = json.dumps([[
         3600 * 46,
@@ -840,7 +833,7 @@ def test_report_include_partial_frames(mocker, watson, date_as_unixtime,
     mocker.patch('builtins.open', mocker.mock_open(read_data=content))
     date = arrow.get(date_as_unixtime)
     report = watson.report(
-        from_=date, to=date, include_partial_frames=include_partial,
+        from_=date, to=date
     )
     assert report["time"] == pytest.approx(sum_, abs=1e-3)
 
