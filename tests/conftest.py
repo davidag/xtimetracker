@@ -1,6 +1,7 @@
 """Provide fixtures for pytest-based unit tests."""
 
 import pytest
+from click.testing import CliRunner
 
 from watson import Watson
 
@@ -20,3 +21,8 @@ def watson(config_dir):
 def watson_df(datafiles):
     """Creates a Watson object with datafiles in config directory."""
     return Watson(config_dir=str(datafiles))
+
+
+@pytest.fixture
+def runner():
+    return CliRunner()
