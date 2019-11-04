@@ -14,7 +14,6 @@ import click
 from click.exceptions import UsageError
 
 import watson as _watson
-from .fullmoon import get_last_full_moon
 
 
 def create_watson():
@@ -173,13 +172,10 @@ def get_start_time_for_period(period):
         start_time = arrow.Arrow.fromdate(now.shift(days=-weekday).date())
     elif period == 'month':
         start_time = arrow.Arrow(year, month, 1)
-    elif period == 'luna':
-        start_time = get_last_full_moon(now)
     elif period == 'year':
         start_time = arrow.Arrow(year, 1, 1)
-    elif period == 'all':
-        # approximately timestamp `0`
-        start_time = arrow.Arrow(1970, 1, 1)
+    elif period == 'fullspan':
+        start_time = arrow.Arrow.fromtimestamp(0)
     else:
         raise ValueError('Unsupported period value: {}'.format(period))
 
@@ -387,16 +383,33 @@ def flatten_report_for_csv(report):
     return result
 
 
-def json_arrow_encoder(obj):
+def build_json(entries):
     """
-    Encodes Arrow objects for JSON output.
-    This function can be used with
-    `json.dumps(..., default=json_arrow_encoder)`, for example.
-    If the object is not an Arrow type, a TypeError is raised
+    Creates a JSON string from a list of dict objects.
+    """
+    return json.dumps(entries, indent=4, sort_keys=True, default=json_encoder)
+
+
+def json_encoder(obj):
+    """
+    Encodes objects for JSON output.
+
     :param obj: Object to encode
-    :return: JSON representation of Arrow object as defined by Arrow
+    :return: JSON representation of object
     """
     if isinstance(obj, arrow.Arrow):
         return obj.for_json()
 
     raise TypeError("Object {} is not JSON serializable".format(obj))
+
+
+def adjusted_span(watson, from_, to, current):
+    """
+    Returns the number of days in interval adjusted to existing frame interval
+    """
+    span = watson.span(current)
+    if from_ < span.start:
+        from_ = span.start
+    if to > span.stop:
+        to = span.stop
+    return from_, to

@@ -784,50 +784,16 @@ def test_report(watson):
         watson.report(arrow.now(), arrow.now(), tags=["A"], ignore_tags=["A"])
 
 
-def test_report_current(mocker, config_dir):
-    mocker.patch('arrow.utcnow', return_value=arrow.get(5000))
-
-    watson = Watson(
-        current={'project': 'foo', 'start': 4000},
-        config_dir=config_dir
-    )
-
-    for _ in range(2):
-        report = watson.report(
-            arrow.utcnow(), arrow.utcnow(), current=True, projects=['foo']
-        )
-    assert len(report['projects']) == 1
-    assert report['projects'][0]['name'] == 'foo'
-    assert report['projects'][0]['time'] == pytest.approx(1000)
-
-    report = watson.report(
-        arrow.utcnow(), arrow.utcnow(), current=False, projects=['foo']
-    )
-    assert len(report['projects']) == 0
-
-    report = watson.report(
-        arrow.utcnow(), arrow.utcnow(), projects=['foo']
-    )
-    assert len(report['projects']) == 0
-
-
 @pytest.mark.parametrize(
-    "date_as_unixtime,include_partial,sum_", (
-        (3600 * 24, False, 0.0),
-        (3600 * 48, False, 0.0),
-        (3600 * 24, True, 7200.0),
-        (3600 * 48, True, 3600.0),
+    "date_as_unixtime,sum_", (
+        (3600 * 24, 7200.0),
+        (3600 * 48, 3600.0),
     )
 )
-def test_report_include_partial_frames(mocker, watson, date_as_unixtime,
-                                       include_partial, sum_):
+def test_report_include_partial_frames(mocker, watson, date_as_unixtime, sum_):
     """Test report building with frames that cross report boundaries
 
-    1 event is added that has 2 hours in one day and 1 in the next. The
-    parametrization checks that the report for both days is empty with
-    `include_partial=False` and report the correct amount of hours with
-    `include_partial=False`
-
+    1 event is added that has 2 hours in one day and 1 in the next.
     """
     content = json.dumps([[
         3600 * 46,
@@ -840,7 +806,7 @@ def test_report_include_partial_frames(mocker, watson, date_as_unixtime,
     mocker.patch('builtins.open', mocker.mock_open(read_data=content))
     date = arrow.get(date_as_unixtime)
     report = watson.report(
-        from_=date, to=date, include_partial_frames=include_partial,
+        from_=date, to=date
     )
     assert report["time"] == pytest.approx(sum_, abs=1e-3)
 
@@ -938,14 +904,16 @@ def test_add_failure(watson):
                    from_date=7000, to_date=6000)
 
 
-def test_validate_report_options(watson):
-    assert watson._validate_report_options(["project_foo"], None)
-    assert watson._validate_report_options(None, ["project_foo"])
-    assert not watson._validate_report_options(["project_foo"],
-                                               ["project_foo"])
-    assert watson._validate_report_options(["project_foo"], ["project_bar"])
-    assert not watson._validate_report_options(["project_foo", "project_bar"],
-                                               ["project_foo"])
-    assert not watson._validate_report_options(["project_foo", "project_bar"],
-                                               ["project_foo", "project_bar"])
-    assert watson._validate_report_options(None, None)
+def test_validate_inclusion_options(watson):
+    assert watson._validate_inclusion_options(["project_foo"], None)
+    assert watson._validate_inclusion_options(None, ["project_foo"])
+    assert not watson._validate_inclusion_options(["project_foo"],
+                                                  ["project_foo"])
+    assert watson._validate_inclusion_options(["project_foo"], ["project_bar"])
+    assert not watson._validate_inclusion_options(
+        ["project_foo", "project_bar"],
+        ["project_foo"])
+    assert not watson._validate_inclusion_options(
+        ["project_foo", "project_bar"],
+        ["project_foo", "project_bar"])
+    assert watson._validate_inclusion_options(None, None)

@@ -1,3 +1,4 @@
+import json
 import re
 from itertools import combinations
 from datetime import datetime, timedelta
@@ -5,286 +6,329 @@ from dateutil.tz import tzlocal
 
 import arrow
 import pytest
-from click.testing import CliRunner
 
 from watson import cli
 
 from . import TEST_FIXTURE_DIR
 
 
-class TestCliCmd:
+# Not all ISO-8601 compliant strings are recognized by arrow.get(str)
+VALID_DATES_DATA = [
+    ('2018', '2018-01-01 00:00:00'),  # years
+    ('2018-04', '2018-04-01 00:00:00'),  # calendar dates
+    ('2018-04-10', '2018-04-10 00:00:00'),
+    ('2018/04/10', '2018-04-10 00:00:00'),
+    ('2018.04.10', '2018-04-10 00:00:00'),
+    ('2018-4-10', '2018-04-10 00:00:00'),
+    ('2018/4/10', '2018-04-10 00:00:00'),
+    ('2018.4.10', '2018-04-10 00:00:00'),
+    ('20180410', '2018-04-10 00:00:00'),
+    ('2018-123', '2018-05-03 00:00:00'),  # ordinal dates
+    ('2018-04-10 12:30:43', '2018-04-10 12:30:43'),
+    ('2018-04-10T12:30:43', '2018-04-10 12:30:43'),
+    ('2018-04-10 12:30:43Z', '2018-04-10 12:30:43'),
+    ('2018-04-10 12:30:43.1233', '2018-04-10 12:30:43'),
+    ('2018-04-10 12:30:43+03:00', '2018-04-10 12:30:43'),
+    ('2018-04-10 12:30:43-07:00', '2018-04-10 12:30:43'),
+    ('2018-04-10T12:30:43-07:00', '2018-04-10 12:30:43'),
+    ('2018-04-10 12:30', '2018-04-10 12:30:00'),
+    ('2018-04-10T12:30', '2018-04-10 12:30:00'),
+    ('2018-04-10 12', '2018-04-10 12:00:00'),
+    ('2018-04-10T12', '2018-04-10 12:00:00'),
+    (
+        '14:05:12',
+        arrow.now()
+        .replace(hour=14, minute=5, second=12)
+        .format('YYYY-MM-DD HH:mm:ss')
+    ),
+    (
+        '14:05',
+        arrow.now()
+        .replace(hour=14, minute=5, second=0)
+        .format('YYYY-MM-DD HH:mm:ss')
+    ),
+]
 
-    cli_runner = CliRunner()
-
-    # Not all ISO-8601 compliant strings are recognized by arrow.get(str)
-    valid_dates_data = [
-        ('2018', '2018-01-01 00:00:00'),  # years
-        ('2018-04', '2018-04-01 00:00:00'),  # calendar dates
-        ('2018-04-10', '2018-04-10 00:00:00'),
-        ('2018/04/10', '2018-04-10 00:00:00'),
-        ('2018.04.10', '2018-04-10 00:00:00'),
-        ('2018-4-10', '2018-04-10 00:00:00'),
-        ('2018/4/10', '2018-04-10 00:00:00'),
-        ('2018.4.10', '2018-04-10 00:00:00'),
-        ('20180410', '2018-04-10 00:00:00'),
-        ('2018-123', '2018-05-03 00:00:00'),  # ordinal dates
-        ('2018-04-10 12:30:43', '2018-04-10 12:30:43'),
-        ('2018-04-10T12:30:43', '2018-04-10 12:30:43'),
-        ('2018-04-10 12:30:43Z', '2018-04-10 12:30:43'),
-        ('2018-04-10 12:30:43.1233', '2018-04-10 12:30:43'),
-        ('2018-04-10 12:30:43+03:00', '2018-04-10 12:30:43'),
-        ('2018-04-10 12:30:43-07:00', '2018-04-10 12:30:43'),
-        ('2018-04-10T12:30:43-07:00', '2018-04-10 12:30:43'),
-        ('2018-04-10 12:30', '2018-04-10 12:30:00'),
-        ('2018-04-10T12:30', '2018-04-10 12:30:00'),
-        ('2018-04-10 12', '2018-04-10 12:00:00'),
-        ('2018-04-10T12', '2018-04-10 12:00:00'),
-        (
-            '14:05:12',
-            arrow.now()
-            .replace(hour=14, minute=5, second=12)
-            .format('YYYY-MM-DD HH:mm:ss')
-        ),
-        (
-            '14:05',
-            arrow.now()
-            .replace(hour=14, minute=5, second=0)
-            .format('YYYY-MM-DD HH:mm:ss')
-        ),
-    ]
-
-    invalid_dates_data = [
-        (' 2018'),
-        ('2018 '),
-        ('201804'),
-        ('18-04-10'),
-        ('180410'),  # truncated representation not allowed
-        ('2018-W08'),  # despite week dates being part of ISO-8601
-        ('2018W08'),
-        ('2018-W08-2'),
-        ('2018W082'),
-        ('hello 2018'),
-        ('yesterday'),
-        ('tomorrow'),
-        ('14:05:12.000'),  # Times alone are not allowed
-        ('140512.000'),
-        ('140512'),
-        ('14.05'),
-        ('2018-04-10T'),
-        ('2018-04-10T12:30:43.'),
-    ]
-
-    @staticmethod
-    def _run(watson, cmd, args):
-        return TestCliCmd.cli_runner.invoke(cmd, args, obj=watson)
-
-    @staticmethod
-    def _run_cmd_from_to(watson, cmd, from_dt, to_dt, *extra_args):
-        args = []
-        if from_dt:
-            args += ['--from', from_dt]
-        if to_dt:
-            args += ['--to', to_dt]
-        for arg in extra_args:
-            args.append(arg)
-        return TestCliCmd._run(
-            watson,
-            cmd,
-            args
-        )
+INVALID_DATES_DATA = [
+    (' 2018'),
+    ('2018 '),
+    ('201804'),
+    ('18-04-10'),
+    ('180410'),  # truncated representation not allowed
+    ('2018-W08'),  # despite week dates being part of ISO-8601
+    ('2018W08'),
+    ('2018-W08-2'),
+    ('2018W082'),
+    ('hello 2018'),
+    ('yesterday'),
+    ('tomorrow'),
+    ('14:05:12.000'),  # Times alone are not allowed
+    ('140512.000'),
+    ('140512'),
+    ('14.05'),
+    ('2018-04-10T'),
+    ('2018-04-10T12:30:43.'),
+]
 
 
-class TestCliAddCmd(TestCliCmd):
-
-    frame_id_pattern = re.compile(r'id: (?P<frame_id>[0-9a-f]+)')
-    @pytest.mark.parametrize('test_dt,expected', TestCliCmd.valid_dates_data)
-    def test_valid_date(self, watson, test_dt, expected):
-        result = self._run_add(watson, test_dt, test_dt)
-        assert result.exit_code == 0
-        assert self._get_start_date(watson, result.output) == expected
-
-    @pytest.mark.parametrize('test_dt', TestCliCmd.invalid_dates_data)
-    def test_invalid_date(self, watson, test_dt):
-        result = self._run_add(watson, test_dt, test_dt)
-        assert result.exit_code != 0
-
-    def _run_add(self, watson, from_dt, to_dt):
-        return TestCliCmd._run(
-            watson,
-            cli.add,
-            ['--from', from_dt, '--to', to_dt, 'project-name']
-        )
-
-    def _get_frame_id(self, output):
-        return self.frame_id_pattern.search(output).group('frame_id')
-
-    def _get_start_date(self, watson, output):
-        frame_id = self._get_frame_id(output)
-        return watson.frames[frame_id].start.format('YYYY-MM-DD HH:mm:ss')
-
-
-class TestCliAggregateCmd(TestCliCmd):
-
-    @pytest.mark.parametrize('test_dt,expected', TestCliCmd.valid_dates_data)
-    def test_valid_date(self, watson, test_dt, expected):
-        # This is super fast, because no internal 'report' invocations are made
-        result = TestCliCmd._run_cmd_from_to(
-            watson, cli.aggregate, test_dt, test_dt
-        )
-        assert result.exit_code == 0
-
-    @pytest.mark.parametrize('test_dt', TestCliCmd.invalid_dates_data)
-    def test_invalid_date(self, watson, test_dt):
-        # This is super fast, because no internal 'report' invocations are made
-        result = TestCliCmd._run_cmd_from_to(
-            watson, cli.aggregate, test_dt, test_dt
-        )
-        assert result.exit_code != 0
-
-    def test_empty_json_output(self, mocker, watson):
-        result = TestCliCmd._run_cmd_from_to(
-            watson, cli.aggregate, None, None, '--json'
-        )
-        assert result.exit_code == 0
-
-
-class TestCliLogCmd(TestCliCmd):
-
-    def test_incompatible_options(self, watson):
-        name_interval_options = ['--' + s for s in cli._SHORTCUT_OPTIONS]
-        for opt1, opt2 in combinations(name_interval_options, 2):
-            result = self._run(watson, cli.log, [opt1, opt2])
-            assert result.exit_code != 0
-
-    @pytest.mark.parametrize('test_dt,expected', TestCliCmd.valid_dates_data)
-    def test_valid_date(self, watson, test_dt, expected):
-        result = TestCliCmd._run_cmd_from_to(watson, cli.log, test_dt, test_dt)
-        assert result.exit_code == 0
-
-    @pytest.mark.parametrize('test_dt', TestCliCmd.invalid_dates_data)
-    def test_invalid_date(self, watson, test_dt):
-        result = TestCliCmd._run_cmd_from_to(watson, cli.log, test_dt, test_dt)
-        assert result.exit_code != 0
-
-
-class TestCliReportCmd(TestCliCmd):
-
-    def test_incompatible_options(self, watson):
-        name_interval_options = ['--' + s for s in cli._SHORTCUT_OPTIONS]
-        for opt1, opt2 in combinations(name_interval_options, 2):
-            result = TestCliCmd._run(watson, cli.log, [opt1, opt2])
-            assert result.exit_code != 0
-
-    @pytest.mark.parametrize('test_dt,expected', TestCliCmd.valid_dates_data)
-    def test_valid_date(self, watson, test_dt, expected):
-        result = TestCliCmd._run_cmd_from_to(
-            watson, cli.report, test_dt, test_dt
-        )
-        assert result.exit_code == 0
-
-    @pytest.mark.parametrize('test_dt', TestCliCmd.invalid_dates_data)
-    def test_invalid_date(self, watson, test_dt):
-        result = TestCliCmd._run_cmd_from_to(
-            watson, cli.report, test_dt, test_dt
-        )
-        assert result.exit_code != 0
-
-    def test_empty_json_output(self, mocker, watson):
-        result = TestCliCmd._run_cmd_from_to(
-            watson, cli.report, None, None, '--json'
-        )
-        assert result.exit_code == 0
-
-
-class TestCliStopCmd(TestCliCmd):
-
-    valid_times_data = [
+VALID_TIMES_DATA = [
         ('14:12'),
         ('14:12:43'),
         ('2019-04-10T14:12'),
         ('2019-04-10T14:12:43'),
     ]
+
+
+class OutputParser:
+    FRAME_ID_PATTERN = re.compile(r'id: (?P<frame_id>[0-9a-f]+)')
+
+    @staticmethod
+    def _get_frame_id(output):
+        return OutputParser.FRAME_ID_PATTERN.search(output).group('frame_id')
+
+    @staticmethod
+    def _get_start_date(watson, output):
+        frame_id = OutputParser._get_frame_id(output)
+        return watson.frames[frame_id].start.format('YYYY-MM-DD HH:mm:ss')
+
+
+@pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
+def test_add_valid_date(runner, watson, test_dt, expected):
+    result = runner.invoke(
+        cli.add,
+        ['-f', test_dt, '-t', test_dt, 'project-name'],
+        obj=watson)
+    assert result.exit_code == 0
+    assert OutputParser._get_start_date(watson, result.output) == expected
+
+
+@pytest.mark.parametrize('test_dt', INVALID_DATES_DATA)
+def test_add_invalid_date(runner, watson, test_dt):
+    result = runner.invoke(cli.add,
+                           ['-f', test_dt, '-t', test_dt, 'project-name'],
+                           obj=watson)
+    assert result.exit_code != 0
+
+
+@pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
+def test_aggregate_valid_date(runner, watson, test_dt, expected):
+    # This is super fast, because no internal 'report' invocations are made
+    result = runner.invoke(cli.aggregate,
+                           ['-f', test_dt, '-t', test_dt],
+                           obj=watson)
+    assert result.exit_code == 0
+
+
+@pytest.mark.parametrize('test_dt', INVALID_DATES_DATA)
+def test_aggregate_invalid_date(runner, watson, test_dt):
+    # This is super fast, because no internal 'report' invocations are made
+    result = runner.invoke(cli.aggregate,
+                           ['-f', test_dt, '-t', test_dt],
+                           obj=watson)
+    assert result.exit_code != 0
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_aggregate_exclude_project(runner, watson_df):
+    result = runner.invoke(cli.aggregate, ['-f', '2019'], obj=watson_df)
+    assert result.exit_code == 0 and 'hubble' in result.output
+    result = runner.invoke(cli.aggregate,
+                           ['-f', '2019', '-P', 'hubble'], obj=watson_df)
+    assert result.exit_code == 0 and 'hubble' not in result.output
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_aggregate_exclude_tag(runner, watson_df):
+    result = runner.invoke(cli.aggregate, ['-f', '2019'], obj=watson_df)
+    assert result.exit_code == 0 and 'reactor' in result.output
+    result = runner.invoke(cli.aggregate,
+                           ['-f', '2019', '-A', 'reactor'], obj=watson_df)
+    assert result.exit_code == 0 and 'reactor' not in result.output
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_aggregate_one_day(runner, watson_df):
+    result = runner.invoke(cli.aggregate,
+                           ['--json', '-f', '2019-10-31', '-t', '2019-11-01'],
+                           obj=watson_df)
+    assert result.exit_code == 0
+    report = json.loads(result.output)
+    total_time = sum(r['time'] for r in report)
+    assert total_time == 20001.0
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_aggregate_include_current(runner, watson_df, mocker):
+    # Warning: mocking this forces to use arrow.datetime when substracting
+    # dates, because Arrow.__sub__() uses isinstance(other, datetime)
+    # and after this patch, datetime is no longer a valid type.
+    mocker.patch('arrow.arrow.datetime', wraps=datetime)
+    start_dt = datetime(2019, 11, 1, 0, 0, 0, tzinfo=tzlocal())
+    arrow.arrow.datetime.now.return_value = start_dt
+    result = runner.invoke(cli.start, ['a-project'], obj=watson_df)
+    assert result.exit_code == 0
+    # Simulate one hour has elapsed so that the current frame lasts exactly
+    # one hour.
+    arrow.arrow.datetime.now.return_value = (start_dt + timedelta(hours=1))
+    result = runner.invoke(
+        cli.aggregate,
+        ['-c', '--json', '-f', '2019-10-31', '-t', '2019-11-01'],
+        obj=watson_df
+    )
+    assert result.exit_code == 0
+    report = json.loads(result.output)
+    total_time = sum(r['time'] for r in report)
+    assert total_time == 20001.0 + (60 * 60)
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_aggregate_dont_include_current(runner, watson_df, mocker):
+    mocker.patch('arrow.arrow.datetime', wraps=datetime)
+    start_dt = datetime(2019, 11, 1, 0, 0, 0, tzinfo=tzlocal())
+    arrow.arrow.datetime.now.return_value = start_dt
+    result = runner.invoke(cli.start, ['a-project'], obj=watson_df)
+    assert result.exit_code == 0
+    # Simulate one hour has elapsed so that the current frame lasts exactly
+    # one hour.
+    arrow.arrow.datetime.now.return_value = (start_dt + timedelta(hours=1))
+    result = runner.invoke(
+        cli.aggregate,
+        ['--json', '-f', '2019-10-31', '-t', '2019-11-01'],
+        obj=watson_df
+    )
+    assert result.exit_code == 0
+    report = json.loads(result.output)
+    total_time = sum(r['time'] for r in report)
+    assert total_time == 20001.0
+
+
+@pytest.mark.parametrize('cmd', [cli.aggregate, cli.log, cli.report])
+def test_incompatible_options(runner, watson, cmd):
+    name_interval_options = ['--' + s for s in cli._SHORTCUT_OPTIONS]
+    for opt1, opt2 in combinations(name_interval_options, 2):
+        result = runner.invoke(cmd, [opt1, opt2], obj=watson)
+        assert result.exit_code != 0
+
+
+@pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
+def test_log_valid_date(runner, watson, test_dt, expected):
+    result = runner.invoke(cli.log, ['-f', test_dt, '-t', test_dt], obj=watson)
+    assert result.exit_code == 0
+
+
+@pytest.mark.parametrize('test_dt', INVALID_DATES_DATA)
+def test_log_invalid_date(runner, watson, test_dt):
+    result = runner.invoke(cli.log, ['-f', test_dt, '-t', test_dt], obj=watson)
+    assert result.exit_code != 0
+
+
+@pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
+def test_report_valid_date(runner, watson, test_dt, expected):
+    result = runner.invoke(cli.report,
+                           ['-f', test_dt, '-t', test_dt],
+                           obj=watson)
+    assert result.exit_code == 0
+
+
+@pytest.mark.parametrize('test_dt', INVALID_DATES_DATA)
+def test_report_invalid_date(runner, watson, test_dt):
+    result = runner.invoke(cli.report,
+                           ['-f', test_dt, '-t', test_dt],
+                           obj=watson)
+    assert result.exit_code != 0
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_report_one_day(runner, watson_df):
+    result = runner.invoke(cli.report,
+                           ['--json', '-f', '2019-10-31', '-t', '2019-11-01'],
+                           obj=watson_df)
+    assert result.exit_code == 0
+    report = json.loads(result.output)
+    assert report['time'] == 20001.0
+
+
+@pytest.mark.parametrize('at_dt', VALID_TIMES_DATA)
+def test_stop_valid_time(runner, watson, mocker, at_dt):
+    mocker.patch('arrow.arrow.datetime', wraps=datetime)
     start_dt = datetime(2019, 4, 10, 14, 0, 0, tzinfo=tzlocal())
-
-    @pytest.mark.parametrize('at_dt', valid_times_data)
-    def test_valid_time(self, mocker, watson, at_dt):
-        mocker.patch('arrow.arrow.datetime', wraps=datetime)
-        result = self._run_start(watson)
-        assert result.exit_code == 0
-        result = self._run_stop(watson, at_dt)
-        assert result.exit_code == 0
-
-    def _run_start(self, watson):
-        arrow.arrow.datetime.now.return_value = self.start_dt
-        return TestCliCmd._run(watson, cli.start, ['project-name'])
-
-    def _run_stop(self, watson, at_dt):
-        # Simulate one hour has elapsed, so that 'at_dt' is older than now()
-        # but newer than the start date.
-        arrow.arrow.datetime.now.return_value = (
-            self.start_dt + timedelta(hours=1)
-        )
-        # The --at parameter is the only option that uses 'TimeParamType'
-        return TestCliCmd._run(watson, cli.stop, ['--at', at_dt])
+    arrow.arrow.datetime.now.return_value = start_dt
+    result = runner.invoke(cli.start, ['a-project'], obj=watson)
+    assert result.exit_code == 0
+    # Simulate one hour has elapsed, so that 'at_dt' is older than now()
+    # but newer than the start date.
+    arrow.arrow.datetime.now.return_value = (start_dt + timedelta(hours=1))
+    result = runner.invoke(cli.stop, ['--at', at_dt], obj=watson)
+    assert result.exit_code == 0
 
 
-class TestCliProjectsCmd(TestCliCmd):
-    @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-    @pytest.mark.parametrize('tag, projects', [
-        ('antenna', ['voyager1', 'voyager2']),
-        ('reactor', ['apollo11']),
-        ('lens', ['hubble']),
-        ])
-    def test_filter_by_tag(self, watson_df, tag, projects):
-        result = TestCliCmd._run(watson_df, cli.projects, [tag])
-        assert result.exit_code == 0
-        assert set(result.output.splitlines()) == set(projects)
-
-    @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-    @pytest.mark.parametrize('tags, projects', [
-        (['probe', 'sensors', 'antenna'], ['voyager1', 'voyager2']),
-        (['probe', 'orbiter', 'sensors', 'antenna'], ['voyager2']),
-        (['reactor', 'brakes'], ['apollo11']),
-        (['lens', 'reactor'], []),
-        ])
-    def test_filter_by_multiple_tags(self, watson_df, tags, projects):
-        result = TestCliCmd._run(watson_df, cli.projects, tags)
-        assert result.exit_code == 0
-        assert set(result.output.splitlines()) == set(projects)
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+@pytest.mark.parametrize('all_projects', [
+    (['apollo11', 'hubble', 'voyager1', 'voyager2'])])
+def test_projects_no_filtering(runner, watson_df, all_projects):
+    result = runner.invoke(cli.projects, [], obj=watson_df)
+    assert result.exit_code == 0
+    assert set(result.output.splitlines()) == set(all_projects)
 
 
-class TestCliTagsCmd(TestCliCmd):
-    @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-    @pytest.mark.parametrize('all_tags', [
-        (['reactor', 'module', 'wheels', 'steering', 'brakes', 'lens',
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+@pytest.mark.parametrize('tag, projects', [
+    ('antenna', ['voyager1', 'voyager2']),
+    ('reactor', ['apollo11']),
+    ('lens', ['hubble']),
+    ])
+def test_projects_filter_by_tag(runner, watson_df, tag, projects):
+    result = runner.invoke(cli.projects, [tag], obj=watson_df)
+    assert result.exit_code == 0
+    assert set(result.output.splitlines()) == set(projects)
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+@pytest.mark.parametrize('tags, projects', [
+    (['probe', 'sensors', 'antenna'], ['voyager1', 'voyager2']),
+    (['probe', 'orbiter', 'sensors', 'antenna'], ['voyager2']),
+    (['reactor', 'brakes'], ['apollo11']),
+    (['lens', 'reactor'], []),
+    ])
+def test_projects_filter_by_multiple_tags(runner, watson_df, tags, projects):
+    result = runner.invoke(cli.projects, tags, obj=watson_df)
+    assert result.exit_code == 0
+    assert set(result.output.splitlines()) == set(projects)
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+@pytest.mark.parametrize('all_tags', [
+    (['reactor', 'module', 'wheels', 'steering', 'brakes', 'lens',
+      'camera', 'transmission', 'probe', 'generators', 'sensors',
+      'antenna', 'orbiter']),
+    ])
+def test_tags_no_filtering(runner, watson_df, all_tags):
+    result = runner.invoke(cli.tags, [], obj=watson_df)
+    assert result.exit_code == 0
+    assert set(result.output.splitlines()) == set(all_tags)
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+@pytest.mark.parametrize('project, tags', [
+    ('', ['reactor', 'module', 'wheels', 'steering', 'brakes', 'lens',
           'camera', 'transmission', 'probe', 'generators', 'sensors',
           'antenna', 'orbiter']),
-        ])
-    def test_no_filtering(self, watson_df, all_tags):
-        result = TestCliCmd._run(watson_df, cli.tags, '')
-        assert result.exit_code == 0
-        assert set(result.output.splitlines()) == set(all_tags)
+    ('voyager1', ['probe', 'generators', 'sensors', 'antenna']),
+    ('voyager2', ['probe', 'orbiter', 'sensors', 'antenna']),
+    ])
+def test_tags_filter_by_project(runner, watson_df, project, tags):
+    result = runner.invoke(cli.tags, project, obj=watson_df)
+    assert result.exit_code == 0
+    assert set(result.output.splitlines()) == set(tags)
 
-    @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-    @pytest.mark.parametrize('project, tags', [
-        ('', ['reactor', 'module', 'wheels', 'steering', 'brakes', 'lens',
-              'camera', 'transmission', 'probe', 'generators', 'sensors',
-              'antenna', 'orbiter']),
-        ('voyager1', ['probe', 'generators', 'sensors', 'antenna']),
-        ('voyager2', ['probe', 'orbiter', 'sensors', 'antenna']),
-        ])
-    def test_filter_by_project(self, watson_df, project, tags):
-        result = TestCliCmd._run(watson_df, cli.tags, project)
-        assert result.exit_code == 0
-        assert set(result.output.splitlines()) == set(tags)
 
-    @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-    @pytest.mark.parametrize('projects, tags', [
-        (['voyager1', 'voyager2'], ['probe', 'sensors', 'antenna']),
-        (['hubble', 'apollo11'], []),
-        (['voyager1', 'apollo11'], []),
-        ])
-    def test_filter_by_multiple_projects(self, watson_df, projects, tags):
-        result = TestCliCmd._run(watson_df, cli.tags, projects)
-        assert result.exit_code == 0
-        assert set(result.output.splitlines()) == set(tags)
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+@pytest.mark.parametrize('projects, tags', [
+    (['voyager1', 'voyager2'], ['probe', 'sensors', 'antenna']),
+    (['hubble', 'apollo11'], []),
+    (['voyager1', 'apollo11'], []),
+    ])
+def test_tags_filter_by_multiple_projects(runner, watson_df, projects, tags):
+    result = runner.invoke(cli.tags, projects, obj=watson_df)
+    assert result.exit_code == 0
+    assert set(result.output.splitlines()) == set(tags)

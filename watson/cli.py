@@ -20,8 +20,10 @@ from .autocompletion import (
 )
 from .frames import Frame
 from .utils import (
+    adjusted_span,
     apply_weekday_offset,
     build_csv,
+    build_json,
     confirm_project,
     confirm_tags,
     create_watson,
@@ -31,11 +33,11 @@ from .utils import (
     frames_to_json,
     get_frame_from_argument,
     get_start_time_for_period,
-    options, safe_save,
+    options,
+    safe_save,
     sorted_groupby,
     style,
     parse_tags,
-    json_arrow_encoder,
 )
 
 
@@ -409,7 +411,7 @@ def status(watson, project, tags, elapsed):
     ))
 
 
-_SHORTCUT_OPTIONS = ['all', 'year', 'month', 'luna', 'week', 'day']
+_SHORTCUT_OPTIONS = ['fullspan', 'year', 'month', 'week', 'day']
 _SHORTCUT_OPTIONS_VALUES = {
     k: get_start_time_for_period(k) for k in _SHORTCUT_OPTIONS
 }
@@ -430,44 +432,39 @@ _SHORTCUT_OPTIONS_VALUES = {
               "Defaults to tomorrow.")
 @click.option('-y', '--year', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['year'],
-              mutually_exclusive=['day', 'week', 'luna', 'month', 'all'],
+              mutually_exclusive=['day', 'week', 'month', 'fullspan'],
               help='Reports activity for the current year.')
 @click.option('-m', '--month', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['month'],
-              mutually_exclusive=['day', 'week', 'luna', 'year', 'all'],
+              mutually_exclusive=['day', 'week', 'year', 'fullspan'],
               help='Reports activity for the current month.')
-@click.option('-l', '--luna', cls=MutuallyExclusiveOption, type=DateTime,
-              flag_value=_SHORTCUT_OPTIONS_VALUES['luna'],
-              mutually_exclusive=['day', 'week', 'month', 'year', 'all'],
-              help='Reports activity for the current moon cycle.')
 @click.option('-w', '--week', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['week'],
-              mutually_exclusive=['day', 'month', 'luna', 'year', 'all'],
+              mutually_exclusive=['day', 'month', 'year', 'fullspan'],
               help='Reports activity for the current week.')
 @click.option('-d', '--day', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['day'],
-              mutually_exclusive=['week', 'month', 'luna', 'year', 'all'],
+              mutually_exclusive=['week', 'month', 'year', 'fullspan'],
               help='Reports activity for the current day.')
-@click.option('-a', '--all', cls=MutuallyExclusiveOption, type=DateTime,
-              flag_value=_SHORTCUT_OPTIONS_VALUES['all'],
-              mutually_exclusive=['day', 'week', 'month', 'luna', 'year'],
+@click.option('-l', '--all', 'fullspan', cls=MutuallyExclusiveOption,
+              type=DateTime, flag_value=_SHORTCUT_OPTIONS_VALUES['fullspan'],
+              mutually_exclusive=['day', 'week', 'month', 'year'],
               help='Reports all activities.')
 @click.option('-p', '--project', 'projects', autocompletion=get_projects,
               multiple=True,
               help="Reports activity only for the given project. You can add "
               "other projects by using this option several times.")
-@click.option('-T', '--tag', 'tags', autocompletion=get_tags, multiple=True,
+@click.option('-P', '--exclude-project', 'exclude_projects', multiple=True,
+              help="Reports activity for all projects but the given ones. You "
+              "can exclude several projects by using the option multiple "
+              "times.")
+@click.option('-a', '--tag', 'tags', autocompletion=get_tags, multiple=True,
               help="Reports activity only for frames containing the given "
               "tag. You can add several tags by using this option multiple "
               "times")
-@click.option('--ignore-project', 'ignore_projects', multiple=True,
-              help="Reports activity for all projects but the given ones. You "
-              "can ignore several projects by using the option multiple "
-              "times. Any given project will be ignored")
-@click.option('--ignore-tag', 'ignore_tags', multiple=True,
+@click.option('-A', '--exclude-tag', 'exclude_tags', multiple=True,
               help="Reports activity for all tags but the given ones. You can "
-              "ignore several tags by using the option multiple times. Any "
-              "given tag will be ignored")
+              "exclude several tags by using the option multiple times.")
 @click.option('-j', '--json', 'output_format', cls=MutuallyExclusiveOption,
               flag_value='json', mutually_exclusive=['csv'],
               multiple=True,
@@ -484,9 +481,9 @@ _SHORTCUT_OPTIONS_VALUES = {
               help="(Don't) view output through a pager.")
 @click.pass_obj
 @catch_watson_error
-def report(watson, current, from_, to, projects, tags, ignore_projects,
-           ignore_tags, year, month, week, day, luna, all, output_format,
-           pager, aggregated=False, include_partial_frames=True):
+def report(watson, current, from_, to, projects, exclude_projects, tags,
+           exclude_tags, year, month, week, day, fullspan, output_format,
+           pager, aggregated=False):
     """
     Display a report of the time spent on each project.
 
@@ -501,12 +498,10 @@ def report(watson, current, from_, to, projects, tags, ignore_projects,
     `--day` sets the report timespan to the current day (beginning at `00:00h`)
     and `--year`, `--month` and `--week` to the current year, month, or week,
     respectively.
-    The shortcut `--luna` sets the timespan to the current moon cycle with
-    the last full moon marking the start of the cycle.
 
     You can limit the report to a project or a tag using the `--project`,
-    `--tag`, `--ignore-project` and `--ignore-tag` options. They can be
-    specified several times each to add or ignore multiple projects or
+    `--tag`, `--exclude-project` and `--exclude-tag` options. They can be
+    specified several times each to include/exclude multiple projects or
     tags to the report.
 
     If you are outputting to the terminal, you can selectively enable a pager
@@ -601,14 +596,12 @@ def report(watson, current, from_, to, projects, tags, ignore_projects,
         tab = ''
 
     report = watson.report(from_, to, current, projects, tags,
-                           ignore_projects, ignore_tags,
+                           exclude_projects, exclude_tags,
                            year=year, month=month, week=week, day=day,
-                           luna=luna, all=all,
-                           include_partial_frames=include_partial_frames)
+                           fullspan=fullspan)
 
     if 'json' in output_format and not aggregated:
-        click.echo(json.dumps(report, indent=4, sort_keys=True,
-                              default=json_arrow_encoder))
+        click.echo(build_json(report))
         return
     elif 'csv' in output_format and not aggregated:
         click.echo(build_csv(flatten_report_for_csv(report)))
@@ -722,10 +715,17 @@ def report(watson, current, from_, to, projects, tags, ignore_projects,
               multiple=True,
               help="Reports activity only for the given project. You can add "
               "other projects by using this option several times.")
-@click.option('-T', '--tag', 'tags', autocompletion=get_tags, multiple=True,
+@click.option('-P', '--exclude-project', 'exclude_projects', multiple=True,
+              help="Reports activity for all projects but the given ones. You "
+              "can exclude several projects by using the option multiple "
+              "times.")
+@click.option('-a', '--tag', 'tags', autocompletion=get_tags, multiple=True,
               help="Reports activity only for frames containing the given "
               "tag. You can add several tags by using this option multiple "
               "times")
+@click.option('-A', '--exclude-tag', 'exclude_tags', multiple=True,
+              help="Reports activity for all tags but the given ones. You can "
+              "exclude several tags by using the option multiple times.")
 @click.option('-j', '--json', 'output_format', cls=MutuallyExclusiveOption,
               flag_value='json', mutually_exclusive=['csv'],
               multiple=True,
@@ -743,8 +743,8 @@ def report(watson, current, from_, to, projects, tags, ignore_projects,
 @click.pass_obj
 @click.pass_context
 @catch_watson_error
-def aggregate(ctx, watson, current, from_, to, projects, tags, output_format,
-              pager):
+def aggregate(ctx, watson, current, from_, to, projects, exclude_projects,
+              tags, exclude_tags, output_format, pager):
     """
     Display a report of the time spent on each project aggregated by day.
 
@@ -814,17 +814,19 @@ def aggregate(ctx, watson, current, from_, to, projects, tags, output_format,
     2018-11-21 00:00:00,2018-11-21 23:59:59,watson,,77.0
     2018-11-21 00:00:00,2018-11-21 23:59:59,watson,docs,77.0
     """
-    delta = (to - from_).days
+    from_, to = adjusted_span(watson, from_, to, current)
+    delta = (to.datetime - from_.datetime).days
     lines = []
-
     for i in range(delta + 1):
         offset = datetime.timedelta(days=i)
         from_offset = from_ + offset
         output = ctx.invoke(report, current=current, from_=from_offset,
-                            to=from_offset, projects=projects, tags=tags,
+                            to=from_offset, projects=projects,
+                            exclude_projects=exclude_projects,
+                            tags=tags,
+                            exclude_tags=exclude_tags,
                             output_format=output_format,
-                            pager=pager, aggregated=True,
-                            include_partial_frames=True)
+                            pager=pager, aggregated=True)
 
         if 'json' in output_format:
             lines.append(output)
@@ -839,8 +841,7 @@ def aggregate(ctx, watson, current, from_, to, projects, tags, output_format,
             lines.append('\n'.join(output))
 
     if 'json' in output_format:
-        click.echo(json.dumps(lines, indent=4, sort_keys=True,
-                   default=json_arrow_encoder))
+        click.echo(build_json(lines))
     elif 'csv' in output_format:
         click.echo(build_csv(lines))
     elif pager or (pager is None and
@@ -862,34 +863,37 @@ def aggregate(ctx, watson, current, from_, to, projects, tags, output_format,
               "Defaults to tomorrow.")
 @click.option('-y', '--year', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['year'],
-              mutually_exclusive=['day', 'week', 'month', 'all'],
+              mutually_exclusive=['day', 'week', 'month', 'fullspan'],
               help='Reports activity for the current year.')
 @click.option('-m', '--month', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['month'],
-              mutually_exclusive=['day', 'week', 'year', 'all'],
+              mutually_exclusive=['day', 'week', 'year', 'fullspan'],
               help='Reports activity for the current month.')
-@click.option('-l', '--luna', cls=MutuallyExclusiveOption, type=DateTime,
-              flag_value=_SHORTCUT_OPTIONS_VALUES['luna'],
-              mutually_exclusive=['day', 'week', 'month', 'year', 'all'],
-              help='Reports activity for the current moon cycle.')
 @click.option('-w', '--week', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['week'],
-              mutually_exclusive=['day', 'month', 'year', 'all'],
+              mutually_exclusive=['day', 'month', 'year', 'fullspan'],
               help='Reports activity for the current week.')
 @click.option('-d', '--day', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['day'],
-              mutually_exclusive=['week', 'month', 'year', 'all'],
+              mutually_exclusive=['week', 'month', 'year', 'fullspan'],
               help='Reports activity for the current day.')
-@click.option('-a', '--all', cls=MutuallyExclusiveOption, type=DateTime,
-              flag_value=_SHORTCUT_OPTIONS_VALUES['all'],
+@click.option('-l', '--all', 'fullspan', cls=MutuallyExclusiveOption,
+              type=DateTime, flag_value=_SHORTCUT_OPTIONS_VALUES['fullspan'],
               mutually_exclusive=['day', 'week', 'month', 'year'],
               help='Reports all activities.')
 @click.option('-p', '--project', 'projects', autocompletion=get_projects,
               multiple=True,
-              help="Logs activity only for the given project. You can add "
+              help="Reports activity only for the given project. You can add "
               "other projects by using this option several times.")
-@click.option('-T', '--tag', 'tags', autocompletion=get_tags, multiple=True,
-              help="Logs activity only for frames containing the given "
+@click.option('-P', '--exclude-project', 'exclude_projects', multiple=True,
+              help="Reports activity for all projects but the given ones. You "
+              "can exclude several projects by using the option multiple "
+              "times.")
+@click.option('-A', '--exclude-tag', 'exclude_tags', multiple=True,
+              help="Reports activity for all tags but the given ones. You can "
+              "exclude several tags by using the option multiple times.")
+@click.option('-a', '--tag', 'tags', autocompletion=get_tags, multiple=True,
+              help="Reports activity only for frames containing the given "
               "tag. You can add several tags by using this option multiple "
               "times")
 @click.option('-j', '--json', 'output_format', cls=MutuallyExclusiveOption,
@@ -908,8 +912,9 @@ def aggregate(ctx, watson, current, from_, to, projects, tags, output_format,
               help="(Don't) view output through a pager.")
 @click.pass_obj
 @catch_watson_error
-def log(watson, current, from_, to, projects, tags, year, month, week, day,
-        luna, all, output_format, pager):
+def log(watson, current, from_, to, projects, exclude_projects, tags,
+        exclude_tags, year, month, week, day, fullspan, output_format,
+        pager):
     """
     Display each recorded session during the given timespan.
 
@@ -921,8 +926,6 @@ def log(watson, current, from_, to, projects, tags, year, month, week, day,
     `--day` sets the log timespan to the current day (beginning at `00:00h`)
     and `--year`, `--month` and `--week` to the current year, month, or week,
     respectively.
-    The shortcut `--luna` sets the timespan to the current moon cycle with
-    the last full moon marking the start of the cycle.
 
     If you are outputting to the terminal, you can selectively enable a pager
     through the `--pager` option.
@@ -972,23 +975,19 @@ def log(watson, current, from_, to, projects, tags, year, month, week, day,
     02cb269,2014-04-16 09:53,2014-04-16 12:43,apollo11,wheels
     1070ddb,2014-04-16 13:48,2014-04-16 16:17,voyager1,"antenna, sensors"
     """  # noqa
-    for start_time in (_ for _ in [day, week, month, luna, year, all]
-                       if _ is not None):
-        from_ = start_time
-
-    if from_ > to:
-        raise click.ClickException("'from' must be anterior to 'to'")
-
-    if watson.current:
-        if current or (current is None and
-                       watson.config.getboolean('options', 'log_current')):
-            cur = watson.current
-            watson.frames.add(cur['project'], cur['start'], arrow.utcnow(),
-                              cur['tags'], id="current")
-
-    span = watson.frames.span(from_, to)
-    filtered_frames = watson.frames.filter(
-        projects=projects or None, tags=tags or None, span=span
+    filtered_frames = watson.log(
+        from_,
+        to,
+        current,
+        projects,
+        tags,
+        exclude_projects,
+        exclude_tags,
+        year,
+        month,
+        week,
+        day,
+        fullspan,
     )
 
     if 'json' in output_format:

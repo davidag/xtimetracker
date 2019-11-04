@@ -25,7 +25,7 @@ from watson.utils import (
     make_json_writer,
     safe_save,
     parse_tags,
-    json_arrow_encoder,
+    json_encoder,
 )
 
 from . import mock_datetime
@@ -39,15 +39,13 @@ _dt = functools.partial(datetime.datetime, tzinfo=tzutc())
     (_dt(2016, 6, 2), 'month', _dt(2016, 6, 1)),
     (_dt(2016, 6, 2), 'week', _dt(2016, 5, 30)),
     (_dt(2016, 6, 2), 'day', _dt(2016, 6, 2)),
-    (_dt(2016, 6, 2), 'all', _dt(1970, 1, 1)),
-    (_dt(2016, 6, 2), 'luna', _dt(2016, 5, 21, 21, 16)),
+    (_dt(2016, 6, 2), 'fullspan', _dt(1970, 1, 1)),
 
     (_dt(2012, 2, 24), 'year', _dt(2012, 1, 1)),
     (_dt(2012, 2, 24), 'month', _dt(2012, 2, 1)),
     (_dt(2012, 2, 24), 'week', _dt(2012, 2, 20)),
     (_dt(2012, 2, 24), 'day', _dt(2012, 2, 24)),
-    (_dt(2012, 2, 24), 'all', _dt(1970, 1, 1)),
-    (_dt(2012, 2, 24), 'luna', _dt(2012, 2, 7, 21, 56)),
+    (_dt(2012, 2, 24), 'fullspan', _dt(1970, 1, 1)),
 ])
 def test_get_start_time_for_period(now, mode, start_time):
     with mock_datetime(now, datetime):
@@ -332,15 +330,15 @@ def test_flatten_report_for_csv(watson):
     assert result[2]['time'] == (4 + 2) * 3600
 
 
-def test_json_arrow_encoder():
+def test_json_encoder():
     with pytest.raises(TypeError):
-        json_arrow_encoder(0)
+        json_encoder(0)
 
     with pytest.raises(TypeError):
-        json_arrow_encoder('foo')
+        json_encoder('foo')
 
     with pytest.raises(TypeError):
-        json_arrow_encoder(None)
+        json_encoder(None)
 
     now = arrow.utcnow()
-    assert json_arrow_encoder(now) == now.for_json()
+    assert json_encoder(now) == now.for_json()

@@ -110,11 +110,11 @@ If `true`, the user will be asked for confirmation before creating a new tag. Th
 
 Globally configure how `dates` should be formatted. All [python's `strftime` directives](http://strftime.org) are supported.
 
-#### `options.log_current` (default: `false`)
+#### `options.include_current` (default: `false`)
 
-If `true`, the output of the `log` command will include the currently running
-frame (if any) by default. The option can be overridden on the command line
-with the `-c/-C` resp. `--current/--no-current` flags.
+If `true`, the output of `log`, `report`, `aggregate` commande will include
+the currently running frame (if any) by default. The option can be overridden
+on the command line with the `-c/-C` resp. `--current/--no-current` flags.
 
 #### `options.pager` (default: `true`)
 
@@ -122,12 +122,6 @@ If `true`, the output of the `log` and `report` command will be
 run through a pager by default. The option can be overridden on the command
 line with the `-g/-G` or `--pager/--no-pager` flags. If other commands output
 in colour, but `log` or `report` do not, try disabling the pager.
-
-#### `options.report_current` (default: `false`)
-
-If `true`, the output of the `report` command will include the currently
-running frame (if any) by default. The option can be overridden on the
-command line with the `-c/-C` resp. `--current/--no-current` flags.
 
 #### `options.stop_on_start` (default: `false`)
 

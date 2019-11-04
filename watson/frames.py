@@ -67,6 +67,14 @@ class Span(object):
     def overlaps(self, frame):
         return frame.start <= self.stop and frame.stop >= self.start
 
+    def __or__(self, other):
+        new_span = Span(self.start, self.stop, self.timeframe)
+        if other.start < self.start:
+            new_span.start = other.start.floor(self.timeframe)
+        if other.stop > self.stop:
+            new_span.stop = other.stop.ceil(self.timeframe)
+        return new_span
+
     def __contains__(self, frame):
         return frame.start >= self.start and frame.stop <= self.stop
 
@@ -75,10 +83,14 @@ class Frames(object):
     def __init__(self, frames=None):
         if not frames:
             frames = []
-
-        rows = [Frame(*frame) for frame in frames]
-        self._rows = rows
-
+        self._rows = []
+        min_start, max_stop = arrow.now(), arrow.Arrow.fromtimestamp(0)
+        for frame in frames:
+            f = Frame(*frame)
+            min_start = min(min_start, f.start)
+            max_stop = max(max_stop, f.stop)
+            self._rows.append(f)
+        self.span = Span(min_start, max_stop)
         self.changed = False
 
     def __len__(self):
@@ -153,7 +165,6 @@ class Frames(object):
         ignore_projects=None,
         ignore_tags=None,
         span=None,
-        include_partial_frames=False,
     ):
 
         for frame in self._rows:
@@ -171,13 +182,10 @@ class Frames(object):
                 yield frame
             elif frame in span:
                 yield frame
-            elif include_partial_frames and span.overlaps(frame):
+            elif span.overlaps(frame):
                 # If requested, return the part of the frame that is within the
                 # span, for frames that are *partially* within span or reaching
                 # over span
                 start = span.start if frame.start < span.start else frame.start
                 stop = span.stop if frame.stop > span.stop else frame.stop
                 yield frame._replace(start=start, stop=stop)
-
-    def span(self, start, stop):
-        return Span(start, stop)

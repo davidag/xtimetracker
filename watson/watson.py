@@ -10,7 +10,7 @@ from collections import defaultdict
 from functools import reduce
 
 from .config import ConfigParser
-from .frames import Frames
+from .frames import Frames, Span
 from .utils import deduplicate, make_json_writer, safe_save, sorted_groupby
 from .version import version as __version__  # noqa
 
@@ -232,6 +232,12 @@ class Watson(object):
     @property
     def is_started(self):
         return bool(self.current)
+
+    def span(self, include_current=False):
+        s = self.frames.span
+        if include_current and self.is_started:
+            s |= Span(self.current['start'], arrow.now())
+        return s
 
     def add(self, project, from_date, to_date, tags):
         if not project:
@@ -455,52 +461,81 @@ class Watson(object):
 
         return conflicting, merging
 
-    def _validate_report_options(self, filtrate, ignored):
+    def _validate_inclusion_options(self, included, excluded):
         return not bool(
-            filtrate and ignored and set(filtrate).intersection(set(ignored)))
+            included
+            and excluded
+            and set(included).intersection(set(excluded))
+        )
 
-    def report(self, from_, to, current=None, projects=None, tags=None,
-               ignore_projects=None, ignore_tags=None, year=None,
-               month=None, week=None, day=None, luna=None, all=None,
-               include_partial_frames=False):
-        for start_time in (_ for _ in [day, week, month, year, luna, all]
+    def log(self, from_, to, current=None, projects=None, tags=None,
+            ignore_projects=None, ignore_tags=None, year=None, month=None,
+            week=None, day=None, fullspan=None):
+        for start_time in (_ for _ in [day, week, month, year, fullspan]
                            if _ is not None):
             from_ = start_time
 
-        if not self._validate_report_options(projects, ignore_projects):
+        if not self._validate_inclusion_options(projects, ignore_projects):
             raise WatsonError(
                 "given projects can't be ignored at the same time")
 
-        if not self._validate_report_options(tags, ignore_tags):
+        if not self._validate_inclusion_options(tags, ignore_tags):
             raise WatsonError("given tags can't be ignored at the same time")
 
         if from_ > to:
-            raise WatsonError("'from' must be anterior to 'to'")
+            raise click.ClickException("'from' must be anterior to 'to'")
 
         if current is None:
-            current = self.config.getboolean('options', 'report_current')
+            current = self.config.getboolean('options', 'include_current')
 
-        if self.current and current:
+        if self.is_started and current:
             cur = self.current
-            self.frames.add(cur['project'], cur['start'], arrow.utcnow(),
+            self.frames.add(cur['project'], cur['start'], arrow.now(),
                             cur['tags'], id="current")
 
-        span = self.frames.span(from_, to)
+        span = Span(from_, to)
+        filtered_frames = self.frames.filter(
+            projects=projects,
+            tags=tags,
+            ignore_projects=ignore_projects,
+            ignore_tags=ignore_tags,
+            span=span,
+        )
+
+        return filtered_frames
+
+    def report(self, from_, to, current=None, projects=None, tags=None,
+               ignore_projects=None, ignore_tags=None, year=None,
+               month=None, week=None, day=None, fullspan=None):
+
+        filtered_frames = self.log(
+            from_,
+            to,
+            current=current,
+            projects=projects,
+            tags=tags,
+            ignore_projects=ignore_projects,
+            ignore_tags=ignore_tags,
+            year=year,
+            month=month,
+            week=week,
+            day=day,
+            fullspan=fullspan
+        )
 
         frames_by_project = sorted_groupby(
-            self.frames.filter(
-                projects=projects or None, tags=tags or None,
-                ignore_projects=ignore_projects or None,
-                ignore_tags=ignore_tags or None,
-                span=span, include_partial_frames=include_partial_frames,
-            ),
+            filtered_frames,
             operator.attrgetter('project')
         )
 
-        if self.current and current:
+        # After sorted_groupby, the filtered_frames generator has been
+        # consumed and this removal does not affect frames_by_project.
+        # That's why we don't delete the current frame inside log().
+        if self.is_started and current:
             del self.frames['current']
 
         total = datetime.timedelta()
+        span = Span(from_, to)
 
         report = {
              'timespan': {
@@ -508,13 +543,13 @@ class Watson(object):
                  'to': span.stop,
              },
              'projects': []
-         }
+        }
 
         for project, frames in frames_by_project:
             frames = tuple(frames)
             delta = reduce(
                 operator.add,
-                (f.stop - f.start for f in frames),
+                (f.stop.datetime - f.start.datetime for f in frames),
                 datetime.timedelta()
             )
             total += delta
@@ -536,7 +571,9 @@ class Watson(object):
             for tag in tags_to_print:
                 delta = reduce(
                     operator.add,
-                    (f.stop - f.start for f in frames if tag in f.tags),
+                    (f.stop.datetime - f.start.datetime
+                     for f in frames
+                     if tag in f.tags),
                     datetime.timedelta()
                 )
 
