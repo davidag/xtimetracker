@@ -18,7 +18,7 @@ from .autocompletion import (
     get_rename_types,
     get_tags,
 )
-from .frames import Frame, Span
+from .frames import Frame
 from .utils import (
     adjusted_span,
     apply_weekday_offset,
@@ -885,6 +885,13 @@ def aggregate(ctx, watson, current, from_, to, projects, exclude_projects,
               multiple=True,
               help="Reports activity only for the given project. You can add "
               "other projects by using this option several times.")
+@click.option('-P', '--exclude-project', 'exclude_projects', multiple=True,
+              help="Reports activity for all projects but the given ones. You "
+              "can exclude several projects by using the option multiple "
+              "times.")
+@click.option('-A', '--exclude-tag', 'exclude_tags', multiple=True,
+              help="Reports activity for all tags but the given ones. You can "
+              "exclude several tags by using the option multiple times.")
 @click.option('-a', '--tag', 'tags', autocompletion=get_tags, multiple=True,
               help="Reports activity only for frames containing the given "
               "tag. You can add several tags by using this option multiple "
@@ -905,8 +912,9 @@ def aggregate(ctx, watson, current, from_, to, projects, exclude_projects,
               help="(Don't) view output through a pager.")
 @click.pass_obj
 @catch_watson_error
-def log(watson, current, from_, to, projects, tags, year, month, week, day,
-        fullspan, output_format, pager):
+def log(watson, current, from_, to, projects, exclude_projects, tags,
+        exclude_tags, year, month, week, day, fullspan, output_format,
+        pager):
     """
     Display each recorded session during the given timespan.
 
@@ -967,23 +975,19 @@ def log(watson, current, from_, to, projects, tags, year, month, week, day,
     02cb269,2014-04-16 09:53,2014-04-16 12:43,apollo11,wheels
     1070ddb,2014-04-16 13:48,2014-04-16 16:17,voyager1,"antenna, sensors"
     """  # noqa
-    for start_time in (_ for _ in [day, week, month, year, fullspan]
-                       if _ is not None):
-        from_ = start_time
-
-    if from_ > to:
-        raise click.ClickException("'from' must be anterior to 'to'")
-
-    if watson.current:
-        if current or (current is None and
-                       watson.config.getboolean('options', 'log_current')):
-            cur = watson.current
-            watson.frames.add(cur['project'], cur['start'], arrow.utcnow(),
-                              cur['tags'], id="current")
-
-    span = Span(from_, to)
-    filtered_frames = watson.frames.filter(
-        projects=projects or None, tags=tags or None, span=span
+    filtered_frames = watson.log(
+        from_,
+        to,
+        current,
+        projects,
+        tags,
+        exclude_projects,
+        exclude_tags,
+        year,
+        month,
+        week,
+        day,
+        fullspan,
     )
 
     if 'json' in output_format:

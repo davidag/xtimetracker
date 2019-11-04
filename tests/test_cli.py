@@ -129,6 +129,24 @@ def test_aggregate_invalid_date(runner, watson, test_dt):
 
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_aggregate_exclude_project(runner, watson_df):
+    result = runner.invoke(cli.aggregate, ['-f', '2019'], obj=watson_df)
+    assert result.exit_code == 0 and 'hubble' in result.output
+    result = runner.invoke(cli.aggregate,
+                           ['-f', '2019', '-P', 'hubble'], obj=watson_df)
+    assert result.exit_code == 0 and 'hubble' not in result.output
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_aggregate_exclude_tag(runner, watson_df):
+    result = runner.invoke(cli.aggregate, ['-f', '2019'], obj=watson_df)
+    assert result.exit_code == 0 and 'reactor' in result.output
+    result = runner.invoke(cli.aggregate,
+                           ['-f', '2019', '-A', 'reactor'], obj=watson_df)
+    assert result.exit_code == 0 and 'reactor' not in result.output
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
 def test_aggregate_one_day(runner, watson_df):
     result = runner.invoke(cli.aggregate,
                            ['--json', '-f', '2019-10-31', '-t', '2019-11-01'],

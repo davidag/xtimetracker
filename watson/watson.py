@@ -468,10 +468,10 @@ class Watson(object):
             and set(included).intersection(set(excluded))
         )
 
-    def report(self, from_, to, current=None, projects=None, tags=None,
-               ignore_projects=None, ignore_tags=None, year=None,
-               month=None, week=None, day=None, fullspan=None):
-        for start_time in (_ for _ in [day, week, month, year,  fullspan]
+    def log(self, from_, to, current=None, projects=None, tags=None,
+            ignore_projects=None, ignore_tags=None, year=None, month=None,
+            week=None, day=None, fullspan=None):
+        for start_time in (_ for _ in [day, week, month, year, fullspan]
                            if _ is not None):
             from_ = start_time
 
@@ -483,32 +483,59 @@ class Watson(object):
             raise WatsonError("given tags can't be ignored at the same time")
 
         if from_ > to:
-            raise WatsonError("'from' must be anterior to 'to'")
+            raise click.ClickException("'from' must be anterior to 'to'")
 
         if current is None:
-            current = self.config.getboolean('options', 'report_current')
+            current = self.config.getboolean('options', 'include_current')
 
-        if self.current and current:
+        if self.is_started and current:
             cur = self.current
-            self.frames.add(cur['project'], cur['start'], arrow.utcnow(),
+            self.frames.add(cur['project'], cur['start'], arrow.now(),
                             cur['tags'], id="current")
 
         span = Span(from_, to)
+        filtered_frames = self.frames.filter(
+            projects=projects,
+            tags=tags,
+            ignore_projects=ignore_projects,
+            ignore_tags=ignore_tags,
+            span=span,
+        )
+
+        return filtered_frames
+
+    def report(self, from_, to, current=None, projects=None, tags=None,
+               ignore_projects=None, ignore_tags=None, year=None,
+               month=None, week=None, day=None, fullspan=None):
+
+        filtered_frames = self.log(
+            from_,
+            to,
+            current=current,
+            projects=projects,
+            tags=tags,
+            ignore_projects=ignore_projects,
+            ignore_tags=ignore_tags,
+            year=year,
+            month=month,
+            week=week,
+            day=day,
+            fullspan=fullspan
+        )
 
         frames_by_project = sorted_groupby(
-            self.frames.filter(
-                projects=projects or None, tags=tags or None,
-                ignore_projects=ignore_projects or None,
-                ignore_tags=ignore_tags or None,
-                span=span,
-            ),
+            filtered_frames,
             operator.attrgetter('project')
         )
 
-        if self.current and current:
+        # After sorted_groupby, the filtered_frames generator has been
+        # consumed and this removal does not affect frames_by_project.
+        # That's why we don't delete the current frame inside log().
+        if self.is_started and current:
             del self.frames['current']
 
         total = datetime.timedelta()
+        span = Span(from_, to)
 
         report = {
              'timespan': {
