@@ -931,14 +931,16 @@ def test_add_failure(watson):
                    from_date=7000, to_date=6000)
 
 
-def test_validate_report_options(watson):
-    assert watson._validate_report_options(["project_foo"], None)
-    assert watson._validate_report_options(None, ["project_foo"])
-    assert not watson._validate_report_options(["project_foo"],
-                                               ["project_foo"])
-    assert watson._validate_report_options(["project_foo"], ["project_bar"])
-    assert not watson._validate_report_options(["project_foo", "project_bar"],
-                                               ["project_foo"])
-    assert not watson._validate_report_options(["project_foo", "project_bar"],
-                                               ["project_foo", "project_bar"])
-    assert watson._validate_report_options(None, None)
+def test_validate_inclusion_options(watson):
+    assert watson._validate_inclusion_options(["project_foo"], None)
+    assert watson._validate_inclusion_options(None, ["project_foo"])
+    assert not watson._validate_inclusion_options(["project_foo"],
+                                                  ["project_foo"])
+    assert watson._validate_inclusion_options(["project_foo"], ["project_bar"])
+    assert not watson._validate_inclusion_options(
+        ["project_foo", "project_bar"],
+        ["project_foo"])
+    assert not watson._validate_inclusion_options(
+        ["project_foo", "project_bar"],
+        ["project_foo", "project_bar"])
+    assert watson._validate_inclusion_options(None, None)

@@ -455,9 +455,12 @@ class Watson(object):
 
         return conflicting, merging
 
-    def _validate_report_options(self, filtrate, ignored):
+    def _validate_inclusion_options(self, included, excluded):
         return not bool(
-            filtrate and ignored and set(filtrate).intersection(set(ignored)))
+            included
+            and excluded
+            and set(included).intersection(set(excluded))
+        )
 
     def report(self, from_, to, current=None, projects=None, tags=None,
                ignore_projects=None, ignore_tags=None, year=None,
@@ -466,11 +469,11 @@ class Watson(object):
                            if _ is not None):
             from_ = start_time
 
-        if not self._validate_report_options(projects, ignore_projects):
+        if not self._validate_inclusion_options(projects, ignore_projects):
             raise WatsonError(
                 "given projects can't be ignored at the same time")
 
-        if not self._validate_report_options(tags, ignore_tags):
+        if not self._validate_inclusion_options(tags, ignore_tags):
             raise WatsonError("given tags can't be ignored at the same time")
 
         if from_ > to:
