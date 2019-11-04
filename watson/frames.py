@@ -67,6 +67,14 @@ class Span(object):
     def overlaps(self, frame):
         return frame.start <= self.stop and frame.stop >= self.start
 
+    def __or__(self, other):
+        new_span = Span(self.start, self.stop, self.timeframe)
+        if other.start < self.start:
+            new_span.start = other.start.floor(self.timeframe)
+        if other.stop > self.stop:
+            new_span.stop = other.stop.ceil(self.timeframe)
+        return new_span
+
     def __contains__(self, frame):
         return frame.start >= self.start and frame.stop <= self.stop
 
