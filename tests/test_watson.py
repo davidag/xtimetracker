@@ -784,33 +784,6 @@ def test_report(watson):
         watson.report(arrow.now(), arrow.now(), tags=["A"], ignore_tags=["A"])
 
 
-def test_report_current(mocker, config_dir):
-    mocker.patch('arrow.utcnow', return_value=arrow.get(5000))
-
-    watson = Watson(
-        current={'project': 'foo', 'start': 4000},
-        config_dir=config_dir
-    )
-
-    for _ in range(2):
-        report = watson.report(
-            arrow.utcnow(), arrow.utcnow(), current=True, projects=['foo']
-        )
-    assert len(report['projects']) == 1
-    assert report['projects'][0]['name'] == 'foo'
-    assert report['projects'][0]['time'] == pytest.approx(1000)
-
-    report = watson.report(
-        arrow.utcnow(), arrow.utcnow(), current=False, projects=['foo']
-    )
-    assert len(report['projects']) == 0
-
-    report = watson.report(
-        arrow.utcnow(), arrow.utcnow(), projects=['foo']
-    )
-    assert len(report['projects']) == 0
-
-
 @pytest.mark.parametrize(
     "date_as_unixtime,sum_", (
         (3600 * 24, 7200.0),

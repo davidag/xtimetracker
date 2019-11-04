@@ -815,9 +815,8 @@ def aggregate(ctx, watson, current, from_, to, projects, exclude_projects,
     2018-11-21 00:00:00,2018-11-21 23:59:59,watson,docs,77.0
     """
     from_, to = adjusted_span(watson, from_, to, current)
-    delta = (to - from_).days
+    delta = (to.datetime - from_.datetime).days
     lines = []
-
     for i in range(delta + 1):
         offset = datetime.timedelta(days=i)
         from_offset = from_ + offset

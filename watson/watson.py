@@ -516,13 +516,13 @@ class Watson(object):
                  'to': span.stop,
              },
              'projects': []
-         }
+        }
 
         for project, frames in frames_by_project:
             frames = tuple(frames)
             delta = reduce(
                 operator.add,
-                (f.stop - f.start for f in frames),
+                (f.stop.datetime - f.start.datetime for f in frames),
                 datetime.timedelta()
             )
             total += delta
@@ -544,7 +544,9 @@ class Watson(object):
             for tag in tags_to_print:
                 delta = reduce(
                     operator.add,
-                    (f.stop - f.start for f in frames if tag in f.tags),
+                    (f.stop.datetime - f.start.datetime
+                     for f in frames
+                     if tag in f.tags),
                     datetime.timedelta()
                 )
 

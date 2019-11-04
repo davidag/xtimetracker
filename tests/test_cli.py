@@ -1,3 +1,4 @@
+import json
 import re
 from itertools import combinations
 from datetime import datetime, timedelta
@@ -127,6 +128,62 @@ def test_aggregate_invalid_date(runner, watson, test_dt):
     assert result.exit_code != 0
 
 
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_aggregate_one_day(runner, watson_df):
+    result = runner.invoke(cli.aggregate,
+                           ['--json', '-f', '2019-10-31', '-t', '2019-11-01'],
+                           obj=watson_df)
+    assert result.exit_code == 0
+    report = json.loads(result.output)
+    total_time = sum(r['time'] for r in report)
+    assert total_time == 20001.0
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_aggregate_include_current(runner, watson_df, mocker):
+    # Warning: mocking this forces to use arrow.datetime when substracting
+    # dates, because Arrow.__sub__() uses isinstance(other, datetime)
+    # and after this patch, datetime is no longer a valid type.
+    mocker.patch('arrow.arrow.datetime', wraps=datetime)
+    start_dt = datetime(2019, 11, 1, 0, 0, 0, tzinfo=tzlocal())
+    arrow.arrow.datetime.now.return_value = start_dt
+    result = runner.invoke(cli.start, ['a-project'], obj=watson_df)
+    assert result.exit_code == 0
+    # Simulate one hour has elapsed so that the current frame lasts exactly
+    # one hour.
+    arrow.arrow.datetime.now.return_value = (start_dt + timedelta(hours=1))
+    result = runner.invoke(
+        cli.aggregate,
+        ['-c', '--json', '-f', '2019-10-31', '-t', '2019-11-01'],
+        obj=watson_df
+    )
+    assert result.exit_code == 0
+    report = json.loads(result.output)
+    total_time = sum(r['time'] for r in report)
+    assert total_time == 20001.0 + (60 * 60)
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_aggregate_dont_include_current(runner, watson_df, mocker):
+    mocker.patch('arrow.arrow.datetime', wraps=datetime)
+    start_dt = datetime(2019, 11, 1, 0, 0, 0, tzinfo=tzlocal())
+    arrow.arrow.datetime.now.return_value = start_dt
+    result = runner.invoke(cli.start, ['a-project'], obj=watson_df)
+    assert result.exit_code == 0
+    # Simulate one hour has elapsed so that the current frame lasts exactly
+    # one hour.
+    arrow.arrow.datetime.now.return_value = (start_dt + timedelta(hours=1))
+    result = runner.invoke(
+        cli.aggregate,
+        ['--json', '-f', '2019-10-31', '-t', '2019-11-01'],
+        obj=watson_df
+    )
+    assert result.exit_code == 0
+    report = json.loads(result.output)
+    total_time = sum(r['time'] for r in report)
+    assert total_time == 20001.0
+
+
 @pytest.mark.parametrize('cmd', [cli.aggregate, cli.log, cli.report])
 def test_incompatible_options(runner, watson, cmd):
     name_interval_options = ['--' + s for s in cli._SHORTCUT_OPTIONS]
@@ -161,6 +218,16 @@ def test_report_invalid_date(runner, watson, test_dt):
                            ['-f', test_dt, '-t', test_dt],
                            obj=watson)
     assert result.exit_code != 0
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_report_one_day(runner, watson_df):
+    result = runner.invoke(cli.report,
+                           ['--json', '-f', '2019-10-31', '-t', '2019-11-01'],
+                           obj=watson_df)
+    assert result.exit_code == 0
+    report = json.loads(result.output)
+    assert report['time'] == 20001.0
 
 
 @pytest.mark.parametrize('at_dt', VALID_TIMES_DATA)
