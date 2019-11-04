@@ -18,8 +18,9 @@ from .autocompletion import (
     get_rename_types,
     get_tags,
 )
-from .frames import Frame
+from .frames import Frame, Span
 from .utils import (
+    adjusted_span,
     apply_weekday_offset,
     build_csv,
     build_json,
@@ -813,6 +814,7 @@ def aggregate(ctx, watson, current, from_, to, projects, exclude_projects,
     2018-11-21 00:00:00,2018-11-21 23:59:59,watson,,77.0
     2018-11-21 00:00:00,2018-11-21 23:59:59,watson,docs,77.0
     """
+    from_, to = adjusted_span(watson, from_, to, current)
     delta = (to - from_).days
     lines = []
 
@@ -980,7 +982,7 @@ def log(watson, current, from_, to, projects, tags, year, month, week, day,
             watson.frames.add(cur['project'], cur['start'], arrow.utcnow(),
                               cur['tags'], id="current")
 
-    span = watson.frames.span(from_, to)
+    span = Span(from_, to)
     filtered_frames = watson.frames.filter(
         projects=projects or None, tags=tags or None, span=span
     )

@@ -10,7 +10,7 @@ from collections import defaultdict
 from functools import reduce
 
 from .config import ConfigParser
-from .frames import Frames
+from .frames import Frames, Span
 from .utils import deduplicate, make_json_writer, safe_save, sorted_groupby
 from .version import version as __version__  # noqa
 
@@ -232,6 +232,12 @@ class Watson(object):
     @property
     def is_started(self):
         return bool(self.current)
+
+    def span(self, include_current=False):
+        s = self.frames.span
+        if include_current and self.is_started:
+            s |= Span(self.current['start'], arrow.now())
+        return s
 
     def add(self, project, from_date, to_date, tags):
         if not project:
@@ -487,7 +493,7 @@ class Watson(object):
             self.frames.add(cur['project'], cur['start'], arrow.utcnow(),
                             cur['tags'], id="current")
 
-        span = self.frames.span(from_, to)
+        span = Span(from_, to)
 
         frames_by_project = sorted_groupby(
             self.frames.filter(

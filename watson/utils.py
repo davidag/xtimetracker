@@ -401,3 +401,15 @@ def json_encoder(obj):
         return obj.for_json()
 
     raise TypeError("Object {} is not JSON serializable".format(obj))
+
+
+def adjusted_span(watson, from_, to, current):
+    """
+    Returns the number of days in interval adjusted to existing frame interval
+    """
+    span = watson.span(current)
+    if from_ < span.start:
+        from_ = span.start
+    if to > span.stop:
+        to = span.stop
+    return from_, to

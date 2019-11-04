@@ -83,10 +83,14 @@ class Frames(object):
     def __init__(self, frames=None):
         if not frames:
             frames = []
-
-        rows = [Frame(*frame) for frame in frames]
-        self._rows = rows
-
+        self._rows = []
+        min_start, max_stop = arrow.now(), arrow.Arrow.fromtimestamp(0)
+        for frame in frames:
+            f = Frame(*frame)
+            min_start = min(min_start, f.start)
+            max_stop = max(max_stop, f.stop)
+            self._rows.append(f)
+        self.span = Span(min_start, max_stop)
         self.changed = False
 
     def __len__(self):
@@ -185,6 +189,3 @@ class Frames(object):
                 start = span.start if frame.start < span.start else frame.start
                 stop = span.stop if frame.stop > span.stop else frame.stop
                 yield frame._replace(start=start, stop=stop)
-
-    def span(self, start, stop):
-        return Span(start, stop)
