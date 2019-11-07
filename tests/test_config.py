@@ -9,16 +9,16 @@ from . import mock_read
 
 def test_config_get(mocker, watson):
     content = """
-[backend]
-url = foo
-token =
+[section]
+option1 = foo
+other_option =
     """
     mocker.patch.object(ConfigParser, 'read', mock_read(content))
     config = watson.config
-    assert config.get('backend', 'url') == 'foo'
-    assert config.get('backend', 'token') == ''
-    assert config.get('backend', 'foo') is None
-    assert config.get('backend', 'foo', 'bar') == 'bar'
+    assert config.get('section', 'option1') == 'foo'
+    assert config.get('section', 'other_option') == ''
+    assert config.get('section', 'foo') is None
+    assert config.get('section', 'foo', 'bar') == 'bar'
     assert config.get('option', 'spamm') is None
     assert config.get('option', 'spamm', 'eggs') == 'eggs'
 

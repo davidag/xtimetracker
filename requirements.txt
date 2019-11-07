@@ -1,4 +1,3 @@
 arrow!=0.11,!=0.12.0
 click
 click-didyoumean
-requests

@@ -70,22 +70,11 @@ function __fish_watson_needs_project -d "check if we need a project"
   return 1
 end
 
-# if a backend.url is set, use it in the command description
-if [ -e ~/.config/watson/config ]
-  set url_string (command watson config backend.url 2> /dev/null)
-  if test -n "$url_string"
-    set url $url_string
-  end
-else
-  set url "a remote Crick server"
-end
-
 # ungrouped
 complete -f -c watson -n '__fish_watson_needs_sub' -a cancel -d "Cancel the last start command"
 complete -f -c watson -n '__fish_watson_needs_sub' -a frames -d "Display the list of all frame IDs"
 complete -f -c watson -n '__fish_watson_needs_sub' -a help -d "Display help information"
 complete -f -c watson -n '__fish_watson_needs_sub' -a projects -d "Display the list of projects"
-complete -f -c watson -n '__fish_watson_needs_sub' -a sync -d "sync your work with $url"
 complete -f -c watson -n '__fish_watson_needs_sub' -a tags -d "Display the list of tags"
 
 # add

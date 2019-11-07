@@ -2,7 +2,6 @@ import datetime
 import json
 import operator
 import os
-import uuid
 import configparser
 import arrow
 from collections import defaultdict
@@ -330,113 +329,6 @@ class Watson(object):
         return sorted(
             t for t in tags
             if not projects or all(t in matched_projects[p] for p in projects))
-
-    def _get_request_info(self, route):
-        config = self.config
-
-        dest = config.get('backend', 'url')
-        token = config.get('backend', 'token')
-
-        if dest and token:
-            dest = "{}/{}/".format(
-                dest.rstrip('/'),
-                route.strip('/')
-            )
-        else:
-            raise ConfigurationError(
-                "You must specify a remote URL (backend.url) and a token "
-                "(backend.token) using the config command."
-            )
-
-        headers = {
-            'content-type': 'application/json',
-            'Authorization': "Token {}".format(token)
-        }
-
-        return dest, headers
-
-    def _get_remote_projects(self):
-        # import when required in order to reduce watson response time (#312)
-        import requests
-        if not hasattr(self, '_remote_projects'):
-            dest, headers = self._get_request_info('projects')
-
-            try:
-                response = requests.get(dest, headers=headers)
-                assert response.status_code == 200
-
-                self._remote_projects = response.json()
-            except requests.ConnectionError:
-                raise WatsonError("Unable to reach the server.")
-            except AssertionError:
-                raise WatsonError(
-                    "An error occurred with the remote "
-                    "server: {}".format(response.json())
-                )
-
-        return self._remote_projects['projects']
-
-    def pull(self):
-        import requests
-        dest, headers = self._get_request_info('frames')
-
-        try:
-            response = requests.get(
-                dest, params={'last_sync': self.last_sync}, headers=headers
-            )
-            assert response.status_code == 200
-        except requests.ConnectionError:
-            raise WatsonError("Unable to reach the server.")
-        except AssertionError:
-            raise WatsonError(
-                "An error occurred with the remote "
-                "server: {}".format(response.json())
-            )
-
-        frames = response.json() or ()
-
-        for frame in frames:
-            frame_id = uuid.UUID(frame['id']).hex
-            self.frames[frame_id] = (
-                frame['project'],
-                frame['start_at'],
-                frame['end_at'],
-                frame['tags']
-            )
-
-        return frames
-
-    def push(self, last_pull):
-        import requests
-        dest, headers = self._get_request_info('frames/bulk')
-
-        frames = []
-
-        for frame in self.frames:
-            if last_pull > frame.updated_at > self.last_sync:
-                frames.append({
-                    'id': uuid.UUID(frame.id).urn,
-                    'start_at': str(frame.start.to('utc')),
-                    'end_at': str(frame.stop.to('utc')),
-                    'project': frame.project,
-                    'tags': frame.tags
-                })
-
-        try:
-            response = requests.post(dest, json.dumps(frames), headers=headers)
-            assert response.status_code == 201
-        except requests.ConnectionError:
-            raise WatsonError("Unable to reach the server.")
-        except AssertionError:
-            raise WatsonError(
-                "An error occurred with the remote server (status: {}). "
-                "Response was:\n{}".format(
-                    response.status_code,
-                    response.text
-                )
-            )
-
-        return frames
 
     def merge_report(self, frames_with_conflict):
         conflict_file_frames = Frames(self._load_json_file(
