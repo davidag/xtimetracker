@@ -411,7 +411,7 @@ def status(watson, project, tags, elapsed):
     ))
 
 
-_SHORTCUT_OPTIONS = ['fullspan', 'year', 'month', 'week', 'day']
+_SHORTCUT_OPTIONS = ['full', 'year', 'month', 'week', 'day']
 _SHORTCUT_OPTIONS_VALUES = {
     k: get_start_time_for_period(k) for k in _SHORTCUT_OPTIONS
 }
@@ -432,24 +432,24 @@ _SHORTCUT_OPTIONS_VALUES = {
               "Defaults to tomorrow.")
 @click.option('-y', '--year', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['year'],
-              mutually_exclusive=['day', 'week', 'month', 'fullspan'],
+              mutually_exclusive=['day', 'week', 'month', 'full'],
               help='Reports activity for the current year.')
 @click.option('-m', '--month', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['month'],
-              mutually_exclusive=['day', 'week', 'year', 'fullspan'],
+              mutually_exclusive=['day', 'week', 'year', 'full'],
               help='Reports activity for the current month.')
 @click.option('-w', '--week', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['week'],
-              mutually_exclusive=['day', 'month', 'year', 'fullspan'],
+              mutually_exclusive=['day', 'month', 'year', 'full'],
               help='Reports activity for the current week.')
 @click.option('-d', '--day', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['day'],
-              mutually_exclusive=['week', 'month', 'year', 'fullspan'],
+              mutually_exclusive=['week', 'month', 'year', 'full'],
               help='Reports activity for the current day.')
-@click.option('-l', '--all', 'fullspan', cls=MutuallyExclusiveOption,
-              type=DateTime, flag_value=_SHORTCUT_OPTIONS_VALUES['fullspan'],
+@click.option('-u', '--full', 'full', cls=MutuallyExclusiveOption,
+              type=DateTime, flag_value=_SHORTCUT_OPTIONS_VALUES['full'],
               mutually_exclusive=['day', 'week', 'month', 'year'],
-              help='Reports all activities.')
+              help='Reports activity for the full interval.')
 @click.option('-p', '--project', 'projects', autocompletion=get_projects,
               multiple=True,
               help="Reports activity only for the given project. You can add "
@@ -482,7 +482,7 @@ _SHORTCUT_OPTIONS_VALUES = {
 @click.pass_obj
 @catch_watson_error
 def report(watson, current, from_, to, projects, exclude_projects, tags,
-           exclude_tags, year, month, week, day, fullspan, output_format,
+           exclude_tags, year, month, week, day, full, output_format,
            pager, aggregated=False):
     """
     Display a report of the time spent on each project.
@@ -598,7 +598,7 @@ def report(watson, current, from_, to, projects, exclude_projects, tags,
     report = watson.report(from_, to, current, projects, tags,
                            exclude_projects, exclude_tags,
                            year=year, month=month, week=week, day=day,
-                           fullspan=fullspan)
+                           full=full)
 
     if 'json' in output_format and not aggregated:
         click.echo(build_json(report))
@@ -863,24 +863,24 @@ def aggregate(ctx, watson, current, from_, to, projects, exclude_projects,
               "Defaults to tomorrow.")
 @click.option('-y', '--year', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['year'],
-              mutually_exclusive=['day', 'week', 'month', 'fullspan'],
+              mutually_exclusive=['day', 'week', 'month', 'full'],
               help='Reports activity for the current year.')
 @click.option('-m', '--month', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['month'],
-              mutually_exclusive=['day', 'week', 'year', 'fullspan'],
+              mutually_exclusive=['day', 'week', 'year', 'full'],
               help='Reports activity for the current month.')
 @click.option('-w', '--week', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['week'],
-              mutually_exclusive=['day', 'month', 'year', 'fullspan'],
+              mutually_exclusive=['day', 'month', 'year', 'full'],
               help='Reports activity for the current week.')
 @click.option('-d', '--day', cls=MutuallyExclusiveOption, type=DateTime,
               flag_value=_SHORTCUT_OPTIONS_VALUES['day'],
-              mutually_exclusive=['week', 'month', 'year', 'fullspan'],
+              mutually_exclusive=['week', 'month', 'year', 'full'],
               help='Reports activity for the current day.')
-@click.option('-l', '--all', 'fullspan', cls=MutuallyExclusiveOption,
-              type=DateTime, flag_value=_SHORTCUT_OPTIONS_VALUES['fullspan'],
+@click.option('-u', '--full', 'full', cls=MutuallyExclusiveOption,
+              type=DateTime, flag_value=_SHORTCUT_OPTIONS_VALUES['full'],
               mutually_exclusive=['day', 'week', 'month', 'year'],
-              help='Reports all activities.')
+              help='Reports activity for the full interval.')
 @click.option('-p', '--project', 'projects', autocompletion=get_projects,
               multiple=True,
               help="Reports activity only for the given project. You can add "
@@ -913,7 +913,7 @@ def aggregate(ctx, watson, current, from_, to, projects, exclude_projects,
 @click.pass_obj
 @catch_watson_error
 def log(watson, current, from_, to, projects, exclude_projects, tags,
-        exclude_tags, year, month, week, day, fullspan, output_format,
+        exclude_tags, year, month, week, day, full, output_format,
         pager):
     """
     Display each recorded session during the given timespan.
@@ -987,7 +987,7 @@ def log(watson, current, from_, to, projects, exclude_projects, tags,
         month,
         week,
         day,
-        fullspan,
+        full,
     )
 
     if 'json' in output_format:

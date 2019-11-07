@@ -470,8 +470,8 @@ class Watson(object):
 
     def log(self, from_, to, current=None, projects=None, tags=None,
             ignore_projects=None, ignore_tags=None, year=None, month=None,
-            week=None, day=None, fullspan=None):
-        for start_time in (_ for _ in [day, week, month, year, fullspan]
+            week=None, day=None, full=None):
+        for start_time in (_ for _ in [day, week, month, year, full]
                            if _ is not None):
             from_ = start_time
 
@@ -506,7 +506,7 @@ class Watson(object):
 
     def report(self, from_, to, current=None, projects=None, tags=None,
                ignore_projects=None, ignore_tags=None, year=None,
-               month=None, week=None, day=None, fullspan=None):
+               month=None, week=None, day=None, full=None):
 
         filtered_frames = self.log(
             from_,
@@ -520,7 +520,7 @@ class Watson(object):
             month=month,
             week=week,
             day=day,
-            fullspan=fullspan
+            full=full
         )
 
         frames_by_project = sorted_groupby(
