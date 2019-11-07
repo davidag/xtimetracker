@@ -17,7 +17,8 @@ import watson as _watson
 
 
 def create_watson():
-    return _watson.Watson(config_dir=os.environ.get('WATSON_DIR'))
+    config_dir = os.environ.get('WATSON_DIR', click.get_app_dir('watson'))
+    return _watson.Watson(config_dir=config_dir)
 
 
 def confirm_project(project, watson_projects):

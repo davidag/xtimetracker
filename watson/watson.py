@@ -5,7 +5,6 @@ import os
 import uuid
 import configparser
 import arrow
-import click
 from collections import defaultdict
 from functools import reduce
 
@@ -48,8 +47,7 @@ class Watson(object):
         self._config = None
         self._config_changed = False
 
-        self._dir = (kwargs.pop('config_dir', None) or
-                     click.get_app_dir('watson'))
+        self._dir = kwargs.pop('config_dir', '')
 
         self.config_file = os.path.join(self._dir, 'config')
         self.frames_file = os.path.join(self._dir, 'frames')
@@ -483,7 +481,7 @@ class Watson(object):
             raise WatsonError("given tags can't be ignored at the same time")
 
         if from_ > to:
-            raise click.ClickException("'from' must be anterior to 'to'")
+            raise WatsonError("'from' must be anterior to 'to'")
 
         if current is None:
             current = self.config.getboolean('options', 'include_current')

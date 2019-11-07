@@ -4,7 +4,6 @@ import json
 import os
 
 import arrow
-from click import get_app_dir
 import pytest
 import requests
 
@@ -186,7 +185,7 @@ def test_frames_with_empty_given_state(config_dir, mocker):
 
 def test_empty_config_dir():
     watson = Watson()
-    assert watson._dir == get_app_dir('watson')
+    assert watson._dir == ''
 
 
 def test_wrong_config(mocker, watson):
