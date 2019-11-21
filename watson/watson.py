@@ -21,7 +21,7 @@ class ConfigurationError(configparser.Error, WatsonError):
     pass
 
 
-class Watson(object):
+class Watson:
     def __init__(self, **kwargs):
         """
         :param frames: If given, should be a list representing the

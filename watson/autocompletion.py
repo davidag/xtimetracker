@@ -77,7 +77,7 @@ def get_project_or_tag_completion(ctx, args, incomplete):
         as it targets other subcommands.
 
         In order to not destroy the current tag stub, the plus must be
-        pretended.
+        prepended.
         """
         for cur_suggestion in tag_suggestions:
             yield "+{cur_suggestion}".format(cur_suggestion=cur_suggestion)
