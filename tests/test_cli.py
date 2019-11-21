@@ -92,6 +92,60 @@ class OutputParser:
         return watson.frames[frame_id].start.format('YYYY-MM-DD HH:mm:ss')
 
 
+# watson start
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_start_invalid_frame_references(runner, watson_df):
+    result = runner.invoke(
+        cli.start,
+        ['-1'],
+        obj=watson_df)
+    assert result.exit_code == 2  # -1 option not allowed
+    result = runner.invoke(
+        cli.start,
+        ['e935a543'],  # this is a valid frame id
+        obj=watson_df)
+    assert result.exit_code == 0
+    assert 'e935a543' in result.output
+
+
+@pytest.mark.parametrize(
+    'gap,stop,cfg,error', [
+        ('-g', '-s', True, False),
+        ('-g', '-s', False, False),
+        ('-g', '-S', True, True),
+        ('-g', '-S', False, True),
+        ('-G', '-s', True, False),
+        ('-G', '-s', False, False),
+        ('-G', '-S', True, True),
+        ('-G', '-S', False, True),
+        ('-g', '', True, False),
+        ('-g', '', False, True),
+        ('-G', '', True, False),
+        ('-G', '', False, True),
+    ]
+)
+def test_start_with_already_started_project(
+        runner, watson, gap, stop, cfg, error):
+    watson.config.set('options', 'stop_on_start', str(cfg))
+    assert watson.config.getboolean('options', 'stop_on_start') == cfg
+    result = runner.invoke(cli.start, 'project-1', obj=watson)
+    assert result.exit_code == 0
+    result = runner.invoke(
+        cli.start,
+        ['project-2', gap, stop],
+        obj=watson)
+    print(result.output)
+    if error:
+        assert result.exit_code == 1
+        assert 'Error' in result.output
+    else:
+        assert result.exit_code == 0
+        assert 'Error' not in result.output
+
+
+# watson add
+
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
 def test_add_valid_date(runner, watson, test_dt, expected):
     result = runner.invoke(
@@ -109,6 +163,8 @@ def test_add_invalid_date(runner, watson, test_dt):
                            obj=watson)
     assert result.exit_code != 0
 
+
+# watson aggregate
 
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
 def test_aggregate_valid_date(runner, watson, test_dt, expected):
@@ -210,6 +266,8 @@ def test_incompatible_options(runner, watson, cmd):
         assert result.exit_code != 0
 
 
+# watson log
+
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
 def test_log_valid_date(runner, watson, test_dt, expected):
     result = runner.invoke(cli.log, ['-f', test_dt, '-t', test_dt], obj=watson)
@@ -221,6 +279,8 @@ def test_log_invalid_date(runner, watson, test_dt):
     result = runner.invoke(cli.log, ['-f', test_dt, '-t', test_dt], obj=watson)
     assert result.exit_code != 0
 
+
+# watson report
 
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
 def test_report_valid_date(runner, watson, test_dt, expected):
@@ -248,6 +308,8 @@ def test_report_one_day(runner, watson_df):
     assert report['time'] == 20001.0
 
 
+# watson stop
+
 @pytest.mark.parametrize('at_dt', VALID_TIMES_DATA)
 def test_stop_valid_time(runner, watson, mocker, at_dt):
     mocker.patch('arrow.arrow.datetime', wraps=datetime)
@@ -261,6 +323,8 @@ def test_stop_valid_time(runner, watson, mocker, at_dt):
     result = runner.invoke(cli.stop, ['--at', at_dt], obj=watson)
     assert result.exit_code == 0
 
+
+# watson projects
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
 @pytest.mark.parametrize('all_projects', [
@@ -295,6 +359,8 @@ def test_projects_filter_by_multiple_tags(runner, watson_df, tags, projects):
     assert result.exit_code == 0
     assert set(result.output.splitlines()) == set(projects)
 
+
+# watson tags
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
 @pytest.mark.parametrize('all_tags', [

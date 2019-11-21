@@ -330,6 +330,8 @@ def test_flatten_report_for_csv(watson):
     assert result[2]['time'] == (4 + 2) * 3600
 
 
+# json_encoder
+
 def test_json_encoder():
     with pytest.raises(TypeError):
         json_encoder(0)

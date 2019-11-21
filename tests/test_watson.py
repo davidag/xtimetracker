@@ -179,7 +179,7 @@ def test_start_new_project_without_tags(watson):
 def test_start_two_projects(watson):
     watson.start('foo')
 
-    with pytest.raises(WatsonError):
+    with pytest.raises(AssertionError):
         watson.start('bar')
 
     assert watson.current != {}
