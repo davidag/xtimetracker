@@ -31,6 +31,7 @@ from .utils import (
     frames_to_csv,
     frames_to_json,
     get_frame_from_argument,
+    get_last_frame_from_project,
     get_start_time_for_period,
     options,
     safe_save,
@@ -161,6 +162,9 @@ def help(ctx, command):
                     "and start time of the current."))
 @click.option('-s/-S', '--stop/--no-stop', 'stop_', default=None,
               help="Stop (or not) an already running project.")
+@click.option('-r', '--restart', is_flag=True, default=False,
+              help="Restart last frame or last project frame if a project "
+                   "is provided.")
 @click.option('-c', '--confirm-new-project', is_flag=True, default=False,
               help="Confirm addition of new project.")
 @click.option('-b', '--confirm-new-tag', is_flag=True, default=False,
@@ -170,7 +174,8 @@ def help(ctx, command):
 @click.pass_obj
 @click.pass_context
 @catch_watson_error
-def start(ctx, watson, gap, stop_, confirm_new_project, confirm_new_tag, args):
+def start(ctx, watson, gap, stop_, restart, confirm_new_project,
+          confirm_new_tag, args):
     """
     Start monitoring time for the given project.
     You can add tags indicating more specifically what you are working on with
@@ -180,27 +185,39 @@ def start(ctx, watson, gap, stop_, confirm_new_project, confirm_new_tag, args):
     `options.stop_on_start` is true, it will be stopped before the new
     project is started.
     """
+    stop_on_start = stop_ or (
+        stop_ is None and
+        watson.config.getboolean('options', 'stop_on_start')
+    )
     project = ' '.join(
         itertools.takewhile(lambda s: not s.startswith('+'), args)
     )
-    if not project:
+    tags = parse_tags(args)
+
+    if not project and not restart:
         raise click.ClickException("No project given.")
+    elif not project and restart:
+        if watson.is_started:
+            project = watson.current['project']
+            tags.extend(watson.current['tags'])
+        else:
+            frame = get_frame_from_argument(watson, "-1")
+            project = frame.project
+            tags.extend(frame.tags)
+    elif project and restart:
+        frame = get_last_frame_from_project(watson, project)
+        project = frame.project
+        tags.extend(frame.tags)
 
     if (watson.config.getboolean('options', 'confirm_new_project') or
             confirm_new_project):
         confirm_project(project, watson.projects())
-
-    tags = parse_tags(args)
 
     if (watson.config.getboolean('options', 'confirm_new_tag') or
             confirm_new_tag):
         confirm_tags(tags, watson.tags)
 
     if watson.is_started:
-        stop_on_start = stop_ or (
-            stop_ is None and
-            watson.config.getboolean('options', 'stop_on_start')
-        )
         if stop_on_start:
             ctx.invoke(stop)
         else:
@@ -211,13 +228,11 @@ def start(ctx, watson, gap, stop_, confirm_new_project, confirm_new_tag, args):
             )
 
     current = watson.start(project, tags, gap=gap)
-
     click.echo("Starting project {}{} at {}".format(
         style('project', project),
         (" " if current['tags'] else "") + style('tags', current['tags']),
         style('time', "{:HH:mm}".format(current['start']))
     ))
-
     watson.save()
 
 

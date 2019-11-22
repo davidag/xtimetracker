@@ -154,6 +154,19 @@ def get_frame_from_argument(watson, arg):
         )
 
 
+def get_last_frame_from_project(watson, project):
+    if project not in watson.projects():
+        raise click.ClickException(
+            style('error', "No project '{}' was found.".format(project)))
+    last_frame = None
+    for f in watson.frames.filter(projects=[project]):
+        if not last_frame:
+            last_frame = f
+        elif last_frame.start < f.start:
+            last_frame = f
+    return last_frame
+
+
 def get_start_time_for_period(period):
     # Using now() from datetime instead of arrow for mocking compatibility.
     now = arrow.Arrow.fromdatetime(datetime.datetime.now())

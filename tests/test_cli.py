@@ -83,29 +83,31 @@ class OutputParser:
     FRAME_ID_PATTERN = re.compile(r'id: (?P<frame_id>[0-9a-f]+)')
 
     @staticmethod
-    def _get_frame_id(output):
+    def get_frame_id(output):
         return OutputParser.FRAME_ID_PATTERN.search(output).group('frame_id')
 
     @staticmethod
-    def _get_start_date(watson, output):
-        frame_id = OutputParser._get_frame_id(output)
+    def get_start_date(watson, output):
+        frame_id = OutputParser.get_frame_id(output)
         return watson.frames[frame_id].start.format('YYYY-MM-DD HH:mm:ss')
 
 
 # watson start
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-def test_start_invalid_frame_references(runner, watson_df):
+def test_start_doesnt_support_frame_references(runner, watson_df):
     result = runner.invoke(
         cli.start,
         ['-1'],
         obj=watson_df)
     assert result.exit_code == 2  # -1 option not allowed
+    frame = watson_df.frames['e935a543']
     result = runner.invoke(
         cli.start,
-        ['e935a543'],  # this is a valid frame id
+        [str(frame.id)],
         obj=watson_df)
     assert result.exit_code == 0
+    assert frame.project not in result.output
     assert 'e935a543' in result.output
 
 
@@ -135,13 +137,101 @@ def test_start_with_already_started_project(
         cli.start,
         ['project-2', gap, stop],
         obj=watson)
-    print(result.output)
     if error:
         assert result.exit_code == 1
         assert 'Error' in result.output
     else:
         assert result.exit_code == 0
         assert 'Error' not in result.output
+
+
+def test_start_restart_running_frame(runner, watson):
+    watson.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(cli.start, ['project-1', '+mytag'], obj=watson)
+    assert result.exit_code == 0
+    assert len(watson.frames) == 0
+    result = runner.invoke(cli.start, ['-r'], obj=watson)
+    assert result.exit_code == 0
+    assert len(watson.frames) == 1
+    assert watson.current['project'] == 'project-1'
+    assert {'mytag'} == set(watson.current['tags'])
+
+
+def test_start_restart_running_frame_plus_tags(runner, watson):
+    watson.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(cli.start, ['project-1', '+tag1'], obj=watson)
+    assert result.exit_code == 0
+    assert len(watson.frames) == 0
+    result = runner.invoke(cli.start, ['-r', '+tag2', '+a tag'], obj=watson)
+    assert result.exit_code == 0
+    assert watson.current['project'] == 'project-1'
+    assert len(watson.frames) == 1
+    assert set(['tag1', 'tag2', 'a tag']) == set(watson.current['tags'])
+
+
+def test_start_restart_last_frame(runner, watson):
+    watson.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(cli.start, 'project-1', obj=watson)
+    assert result.exit_code == 0
+    result = runner.invoke(cli.stop, obj=watson)
+    assert result.exit_code == 0
+    result = runner.invoke(cli.start, ['-r'], obj=watson)
+    assert result.exit_code == 0
+    assert watson.current['project'] == 'project-1'
+    assert len(watson.frames) == 1
+
+
+def test_start_restart_last_frame_plus_tags(runner, watson):
+    watson.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(cli.start, ['project-1', '+tag1'], obj=watson)
+    assert result.exit_code == 0
+    result = runner.invoke(cli.stop, obj=watson)
+    assert result.exit_code == 0
+    result = runner.invoke(cli.start, ['-r', '+tag2'], obj=watson)
+    assert result.exit_code == 0
+    assert len(watson.frames) == 1
+    assert watson.current['project'] == 'project-1'
+    assert set(['tag1', 'tag2']) == set(watson.current['tags'])
+
+
+def test_start_restart_last_project_frame(runner, watson):
+    watson.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(
+        cli.add,
+        ['-f 10:00', '-t 11:00', 'project-1', '+mytag1'],
+        obj=watson
+    )
+    assert result.exit_code == 0
+    result = runner.invoke(
+        cli.add,
+        ['-f 08:00', '-t 09:00', 'project-1', '+mytag2'],
+        obj=watson
+    )
+    assert result.exit_code == 0
+    result = runner.invoke(cli.start, ['-r', 'project-1'], obj=watson)
+    assert result.exit_code == 0
+    assert watson.current['project'] == 'project-1'
+    assert {'mytag1'} == set(watson.current['tags'])
+
+
+def test_start_restart_last_project_frame_plus_tags(runner, watson):
+    watson.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(
+        cli.add,
+        ['-f 10:00', '-t 11:00', 'project-1', '+mytag1'],
+        obj=watson
+    )
+    assert result.exit_code == 0
+    result = runner.invoke(
+        cli.add,
+        ['-f 08:00', '-t 09:00', 'project-1', '+mytag2'],
+        obj=watson
+    )
+    assert result.exit_code == 0
+    result = runner.invoke(cli.start, ['-r', 'project-1', '+tagA'], obj=watson)
+    assert result.exit_code == 0
+    assert watson.current['project'] == 'project-1'
+    assert {'tagA', 'mytag1'} == set(watson.current['tags'])
 
 
 # watson add
@@ -153,7 +243,7 @@ def test_add_valid_date(runner, watson, test_dt, expected):
         ['-f', test_dt, '-t', test_dt, 'project-name'],
         obj=watson)
     assert result.exit_code == 0
-    assert OutputParser._get_start_date(watson, result.output) == expected
+    assert OutputParser.get_start_date(watson, result.output) == expected
 
 
 @pytest.mark.parametrize('test_dt', INVALID_DATES_DATA)
