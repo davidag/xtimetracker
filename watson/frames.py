@@ -58,7 +58,7 @@ class Frame(namedtuple('Frame', HEADERS)):
         return self.start >= other.start
 
 
-class Span(object):
+class Span():
     def __init__(self, start, stop, timeframe='day'):
         self.timeframe = timeframe
         self.start = start.floor(self.timeframe)
@@ -79,7 +79,7 @@ class Span(object):
         return frame.start >= self.start and frame.stop <= self.stop
 
 
-class Frames(object):
+class Frames():
     def __init__(self, frames=None):
         if not frames:
             frames = []
@@ -142,10 +142,16 @@ class Frames(object):
         for row in self._rows:
             yield row[index]
 
+    def _update_span(self, start, stop):
+        min_start = min(start, self.span.start)
+        max_stop = max(stop, self.span.stop)
+        self.span = Span(min_start, max_stop)
+
     def add(self, *args, **kwargs):
         self.changed = True
         frame = self.new_frame(*args, **kwargs)
         self._rows.append(frame)
+        self._update_span(frame.start, frame.stop)
         return frame
 
     def new_frame(self, project, start, stop, tags=None, id=None,
