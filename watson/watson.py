@@ -21,7 +21,7 @@ class ConfigurationError(configparser.Error, WatsonError):
     pass
 
 
-class Watson(object):
+class Watson:
     def __init__(self, **kwargs):
         """
         :param frames: If given, should be a list representing the
@@ -42,7 +42,6 @@ class Watson(object):
         self._current = None
         self._old_state = None
         self._frames = None
-        self._last_sync = None
         self._config = None
         self._config_changed = False
 
@@ -51,16 +50,12 @@ class Watson(object):
         self.config_file = os.path.join(self._dir, 'config')
         self.frames_file = os.path.join(self._dir, 'frames')
         self.state_file = os.path.join(self._dir, 'state')
-        self.last_sync_file = os.path.join(self._dir, 'last_sync')
 
         if 'frames' in kwargs:
             self.frames = kwargs['frames']
 
         if 'current' in kwargs:
             self.current = kwargs['current']
-
-        if 'last_sync' in kwargs:
-            self.last_sync = kwargs['last_sync']
 
     def _load_json_file(self, filename, type=dict):
         """
@@ -153,9 +148,6 @@ class Watson(object):
             if self._config_changed:
                 safe_save(self.config_file, self.config.write)
 
-            if self._last_sync is not None:
-                safe_save(self.last_sync_file,
-                          make_json_writer(self._format_date, self.last_sync))
         except OSError as e:
             raise WatsonError(
                 "Impossible to write {}: {}".format(e.filename, e)
@@ -207,26 +199,6 @@ class Watson(object):
             self._old_state = self._current
 
     @property
-    def last_sync(self):
-        if self._last_sync is None:
-            self.last_sync = self._load_json_file(
-                self.last_sync_file, type=int
-            )
-
-        return self._last_sync
-
-    @last_sync.setter
-    def last_sync(self, value):
-        if not value:
-            self._last_sync = arrow.get(0)
-            return
-
-        if not isinstance(value, arrow.Arrow):
-            value = self._parse_date(value)
-
-        self._last_sync = value
-
-    @property
     def is_started(self):
         return bool(self.current)
 
@@ -248,18 +220,10 @@ class Watson(object):
         frame = self.frames.add(project, from_date, to_date, tags=tags)
         return frame
 
-    def start(self, project, tags=None, restart=False, gap=True):
-        if self.is_started:
-            raise WatsonError(
-                "Project {} is already started.".format(
-                    self.current['project']
-                )
-            )
-
+    def start(self, project, tags=None, gap=True):
+        assert not self.is_started
         default_tags = self.config.getlist('default_tags', project)
-        if not restart:
-            tags = (tags or []) + default_tags
-
+        tags = (tags or []) + default_tags
         new_frame = {'project': project, 'tags': deduplicate(tags)}
         if not gap:
             stop_of_prev_frame = self.frames[-1].stop

@@ -8,6 +8,7 @@ import os
 import shutil
 import tempfile
 from io import StringIO
+from typing import Iterable
 
 import arrow
 import click
@@ -21,28 +22,25 @@ def create_watson():
     return _watson.Watson(config_dir=config_dir)
 
 
-def confirm_project(project, watson_projects):
+def confirm_project(project: str, existing_projects: Iterable):
     """
     Ask user to confirm creation of a new project
-    'project' must be a string
-    'watson_projects' must be an interable.
     Returns True on accept and raises click.exceptions.Abort on reject
     """
-    if project not in watson_projects:
+    if project not in existing_projects:
         msg = ("Project '%s' does not exist yet. Create it?"
                % style('project', project))
         click.confirm(msg, abort=True)
     return True
 
 
-def confirm_tags(tags, watson_tags):
+def confirm_tags(tags: Iterable, existing_tags: Iterable):
     """
     Ask user to confirm creation of new tags (each separately)
-    Both 'tags' and 'watson_tags" must be iterables.
     Returns True if all accepted and raises click.exceptions.Abort on reject
     """
     for tag in tags:
-        if tag not in watson_tags:
+        if tag not in existing_tags:
             msg = "Tag '%s' does not exist yet. Create it?" % style('tag', tag)
             click.confirm(msg, abort=True)
     return True
@@ -154,6 +152,19 @@ def get_frame_from_argument(watson, arg):
             style('error', "No frame found with id"),
             style('short_id', arg))
         )
+
+
+def get_last_frame_from_project(watson, project):
+    if project not in watson.projects():
+        raise click.ClickException(
+            style('error', "No project '{}' was found.".format(project)))
+    last_frame = None
+    for f in watson.frames.filter(projects=[project]):
+        if not last_frame:
+            last_frame = f
+        elif last_frame.start < f.start:
+            last_frame = f
+    return last_frame
 
 
 def get_start_time_for_period(period):

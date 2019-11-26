@@ -31,6 +31,7 @@ from .utils import (
     frames_to_csv,
     frames_to_json,
     get_frame_from_argument,
+    get_last_frame_from_project,
     get_start_time_for_period,
     options,
     safe_save,
@@ -155,33 +156,26 @@ def help(ctx, command):
     click.echo(cmd.get_help(ctx))
 
 
-def _start(watson, project, tags, restart=False, gap=True):
-    """
-    Start project with given list of tags and save status.
-    """
-    current = watson.start(project, tags, restart=restart, gap=gap)
-    click.echo("Starting project {}{} at {}".format(
-        style('project', project),
-        (" " if current['tags'] else "") + style('tags', current['tags']),
-        style('time', "{:HH:mm}".format(current['start']))
-    ))
-    watson.save()
-
-
 @cli.command()
-@click.option('-g/-G', '--gap/--no-gap', 'gap_', is_flag=True, default=True,
-              help=("(Don't) leave gap between end time of previous project "
+@click.option('-g/-G', '--gap/--no-gap', 'gap', is_flag=True, default=True,
+              help=("Leave (or not) gap between end time of previous project "
                     "and start time of the current."))
-@click.argument('args', nargs=-1,
-                autocompletion=get_project_or_tag_completion)
+@click.option('-s/-S', '--stop/--no-stop', 'stop_', default=None,
+              help="Stop (or not) an already running project.")
+@click.option('-r', '--restart', is_flag=True, default=False,
+              help="Restart last frame or last project frame if a project "
+                   "is provided.")
 @click.option('-c', '--confirm-new-project', is_flag=True, default=False,
               help="Confirm addition of new project.")
 @click.option('-b', '--confirm-new-tag', is_flag=True, default=False,
               help="Confirm creation of new tag.")
+@click.argument('args', nargs=-1,
+                autocompletion=get_project_or_tag_completion)
 @click.pass_obj
 @click.pass_context
 @catch_watson_error
-def start(ctx, watson, confirm_new_project, confirm_new_tag, args, gap_=True):
+def start(ctx, watson, gap, stop_, restart, confirm_new_project,
+          confirm_new_tag, args):
     """
     Start monitoring time for the given project.
     You can add tags indicating more specifically what you are working on with
@@ -191,40 +185,55 @@ def start(ctx, watson, confirm_new_project, confirm_new_tag, args, gap_=True):
     `options.stop_on_start` is true, it will be stopped before the new
     project is started.
     """
+    stop_on_start = stop_ or (
+        stop_ is None and
+        watson.config.getboolean('options', 'stop_on_start')
+    )
     project = ' '.join(
         itertools.takewhile(lambda s: not s.startswith('+'), args)
     )
-    if not project:
-        raise click.ClickException("No project given.")
+    tags = parse_tags(args)
 
-    # Confirm creation of new project if that option is set
+    if not project and not restart:
+        raise click.ClickException("No project given.")
+    elif not project and restart:
+        if watson.is_started:
+            project = watson.current['project']
+            tags.extend(watson.current['tags'])
+        else:
+            frame = get_frame_from_argument(watson, "-1")
+            project = frame.project
+            tags.extend(frame.tags)
+    elif project and restart:
+        frame = get_last_frame_from_project(watson, project)
+        project = frame.project
+        tags.extend(frame.tags)
+
     if (watson.config.getboolean('options', 'confirm_new_project') or
             confirm_new_project):
         confirm_project(project, watson.projects())
 
-    # Parse all the tags
-    tags = parse_tags(args)
-
-    # Confirm creation of new tag(s) if that option is set
     if (watson.config.getboolean('options', 'confirm_new_tag') or
             confirm_new_tag):
         confirm_tags(tags, watson.tags)
 
-    if project and watson.is_started and not gap_:
-        current = watson.current
-        errmsg = ("Project '{}' is already started and '--no-gap' is passed. "
-                  "Please stop manually.")
-        raise click.ClickException(
-            style(
-                'error', errmsg.format(current['project'])
+    if watson.is_started:
+        if stop_on_start:
+            ctx.invoke(stop)
+        else:
+            raise click.ClickException(
+                style('error', "Project {} is already started.".format(
+                    watson.current['project'])
+                )
             )
-        )
 
-    if (project and watson.is_started and
-            watson.config.getboolean('options', 'stop_on_start')):
-        ctx.invoke(stop)
-
-    _start(watson, project, tags, gap=gap_)
+    current = watson.start(project, tags, gap=gap)
+    click.echo("Starting project {}{} at {}".format(
+        style('project', project),
+        (" " if current['tags'] else "") + style('tags', current['tags']),
+        style('time', "{:HH:mm}".format(current['start']))
+    ))
+    watson.save()
 
 
 @cli.command(context_settings={'ignore_unknown_options': True})
@@ -247,49 +256,6 @@ def stop(watson, at_):
         style('short_id', frame.id),
     ))
     watson.save()
-
-
-@cli.command(context_settings={'ignore_unknown_options': True})
-@click.option('-s/-S', '--stop/--no-stop', 'stop_', default=None,
-              help="(Don't) Stop an already running project.")
-@click.argument('frame', default='-1', autocompletion=get_frames)
-@click.pass_obj
-@click.pass_context
-@catch_watson_error
-def restart(ctx, watson, frame, stop_):
-    """
-    Start monitoring time for a previously stopped project.
-
-    By default, the last recorded project will be restarted, using the same
-    tags recorded in that frame.
-
-    A different frame can be used passing an integer frame index argument or a
-    frame ID. For example, to restart the second-to-last frame, pass `-2` as
-    the frame index.
-
-    If the configuration option `options.stop_on_restart` is true, the
-    current project, if any, will be stopped before the new frame is started.
-    """
-    if not watson.frames and not watson.is_started:
-        raise click.ClickException(
-            style('error', "No frames recorded yet. It's time to create your "
-                           "first one!"))
-
-    if watson.is_started:
-        if stop_ or (stop_ is None and
-                     watson.config.getboolean('options', 'stop_on_restart')):
-            ctx.invoke(stop)
-        else:
-            # Raise error here, instead of in watson.start(), otherwise
-            # will give misleading error if running frame is the first one
-            raise click.ClickException("{} {} {}".format(
-                style('error', "Project already started:"),
-                style('project', watson.current['project']),
-                style('tags', watson.current['tags'])))
-
-    frame = get_frame_from_argument(watson, frame)
-
-    _start(watson, frame.project, frame.tags, restart=True)
 
 
 @cli.command()

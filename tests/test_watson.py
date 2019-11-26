@@ -70,53 +70,6 @@ def test_current_with_empty_given_state(config_dir, mocker):
     assert watson.current == {}
 
 
-# last_sync
-
-def test_last_sync(mocker, watson):
-    now = arrow.get(4123)
-    content = json.dumps(now.timestamp)
-
-    mocker.patch('builtins.open', mocker.mock_open(read_data=content))
-    assert watson.last_sync == now
-
-
-def test_last_sync_with_empty_file(mocker, watson):
-    mocker.patch('builtins.open', mocker.mock_open(read_data=""))
-    mocker.patch('os.path.getsize', return_value=0)
-    assert watson.last_sync == arrow.get(0)
-
-
-def test_last_sync_with_nonexistent_file(mocker, watson):
-    mocker.patch('builtins.open', side_effect=IOError)
-    assert watson.last_sync == arrow.get(0)
-
-
-def test_last_sync_watson_non_valid_json(mocker, watson):
-    content = "{'foo': bar}"
-
-    mocker.patch('builtins.open', mocker.mock_open(read_data=content))
-    mocker.patch('os.path.getsize', return_value=len(content))
-    with pytest.raises(WatsonError):
-        watson.last_sync
-
-
-def test_last_sync_with_given_state(config_dir, mocker):
-    content = json.dumps(123)
-    now = arrow.now()
-    watson = Watson(last_sync=now, config_dir=config_dir)
-
-    mocker.patch('builtins.open', mocker.mock_open(read_data=content))
-    assert watson.last_sync == now
-
-
-def test_last_sync_with_empty_given_state(config_dir, mocker):
-    content = json.dumps(123)
-    watson = Watson(last_sync=None, config_dir=config_dir)
-
-    mocker.patch('builtins.open', mocker.mock_open(read_data=content))
-    assert watson.last_sync == arrow.get(0)
-
-
 # frames
 
 def test_frames(mocker, watson):
@@ -226,7 +179,7 @@ def test_start_new_project_without_tags(watson):
 def test_start_two_projects(watson):
     watson.start('foo')
 
-    with pytest.raises(WatsonError):
+    with pytest.raises(AssertionError):
         watson.start('bar')
 
     assert watson.current != {}
@@ -448,28 +401,6 @@ def test_save_config(mocker, watson):
     watson.save()
 
     assert write_mock.call_count == 1
-
-
-def test_save_last_sync(mocker, watson, json_mock):
-    now = arrow.now()
-    watson.last_sync = now
-
-    mocker.patch('builtins.open', mocker.mock_open())
-    watson.save()
-
-    assert json_mock.call_count == 1
-    assert json_mock.call_args[0][0] == now.timestamp
-
-
-def test_save_empty_last_sync(config_dir, mocker, json_mock):
-    watson = Watson(last_sync=arrow.now(), config_dir=config_dir)
-    watson.last_sync = None
-
-    mocker.patch('builtins.open', mocker.mock_open())
-    watson.save()
-
-    assert json_mock.call_count == 1
-    assert json_mock.call_args[0][0] == 0
 
 
 def test_watson_save_calls_safe_save(mocker, config_dir, watson):

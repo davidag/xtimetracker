@@ -10,7 +10,7 @@ import datetime
 import pytest
 from io import StringIO
 from unittest.mock import patch
-from click.exceptions import Abort
+from click.exceptions import Abort, ClickException
 from dateutil.tz import tzutc
 
 from watson.utils import (
@@ -22,13 +22,14 @@ from watson.utils import (
     frames_to_csv,
     frames_to_json,
     get_start_time_for_period,
+    get_last_frame_from_project,
     make_json_writer,
     safe_save,
     parse_tags,
     json_encoder,
 )
 
-from . import mock_datetime
+from . import mock_datetime, TEST_FIXTURE_DIR
 
 
 _dt = functools.partial(datetime.datetime, tzinfo=tzutc())
@@ -330,6 +331,8 @@ def test_flatten_report_for_csv(watson):
     assert result[2]['time'] == (4 + 2) * 3600
 
 
+# json_encoder
+
 def test_json_encoder():
     with pytest.raises(TypeError):
         json_encoder(0)
@@ -342,3 +345,15 @@ def test_json_encoder():
 
     now = arrow.utcnow()
     assert json_encoder(now) == now.for_json()
+
+
+# get_last_frame_from_project
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_get_last_frame_from_project(watson_df):
+    with pytest.raises(ClickException):
+        get_last_frame_from_project(watson_df, "invalid_project")
+
+    frame = get_last_frame_from_project(watson_df, "hubble")
+    assert frame.project == "hubble"
+    assert set(frame.tags) == {"transmission", "camera"}
