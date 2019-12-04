@@ -156,8 +156,7 @@ def get_frame_from_argument(watson, arg):
 
 def get_last_frame_from_project(watson, project):
     if project not in watson.projects():
-        raise click.ClickException(
-            style('error', "No project '{}' was found.".format(project)))
+        return None
     last_frame = None
     for f in watson.frames.filter(projects=[project]):
         if not last_frame:

@@ -10,7 +10,7 @@ import datetime
 import pytest
 from io import StringIO
 from unittest.mock import patch
-from click.exceptions import Abort, ClickException
+from click.exceptions import Abort
 from dateutil.tz import tzutc
 
 from watson.utils import (
@@ -351,8 +351,7 @@ def test_json_encoder():
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
 def test_get_last_frame_from_project(watson_df):
-    with pytest.raises(ClickException):
-        get_last_frame_from_project(watson_df, "invalid_project")
+    assert get_last_frame_from_project(watson_df, "invalid_project") is None
 
     frame = get_last_frame_from_project(watson_df, "hubble")
     assert frame.project == "hubble"

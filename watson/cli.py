@@ -189,14 +189,18 @@ def start(ctx, watson, gap, stop_, restart, confirm_new_project,
         stop_ is None and
         watson.config.getboolean('options', 'stop_on_start')
     )
+    restart_on_start = (
+        restart or
+        watson.config.getboolean('options', 'restart_on_start')
+    )
     project = ' '.join(
         itertools.takewhile(lambda s: not s.startswith('+'), args)
     )
     tags = parse_tags(args)
 
-    if not project and not restart:
+    if not project and not restart_on_start:
         raise click.ClickException("No project given.")
-    elif not project and restart:
+    elif not project and restart_on_start:
         if watson.is_started:
             project = watson.current['project']
             tags.extend(watson.current['tags'])
@@ -204,10 +208,13 @@ def start(ctx, watson, gap, stop_, restart, confirm_new_project,
             frame = get_frame_from_argument(watson, "-1")
             project = frame.project
             tags.extend(frame.tags)
-    elif project and restart:
-        frame = get_last_frame_from_project(watson, project)
-        project = frame.project
-        tags.extend(frame.tags)
+    elif project and restart_on_start:
+        if watson.is_started and project == watson.current['project']:
+            tags.extend(watson.current['tags'])
+        else:
+            frame = get_last_frame_from_project(watson, project)
+            if frame:
+                tags.extend(frame.tags)
 
     if (watson.config.getboolean('options', 'confirm_new_project') or
             confirm_new_project):

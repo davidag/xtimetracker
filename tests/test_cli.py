@@ -234,6 +234,30 @@ def test_start_restart_last_project_frame_plus_tags(runner, watson):
     assert {'tagA', 'mytag1'} == set(watson.current['tags'])
 
 
+def test_start_restart_new_project_does_not_fail(runner, watson):
+    watson.config.set('options', 'restart_on_start', "true")
+    runner.invoke(cli.start, ['project-1'], obj=watson)
+    assert watson.current['project'] == 'project-1'
+
+
+def test_start_restart_config_option_last_frame(runner, watson):
+    watson.config.set('options', 'restart_on_start', "true")
+    runner.invoke(cli.start, ['project-1', '+tag1'], obj=watson)
+    runner.invoke(cli.stop, obj=watson)
+    runner.invoke(cli.start, ['project-1', '+tag2'], obj=watson)
+    assert watson.current['project'] == 'project-1'
+    assert set(['tag1', 'tag2']) == set(watson.current['tags'])
+
+
+def test_start_restart_config_option_current(runner, watson):
+    watson.config.set('options', 'restart_on_start', "true")
+    watson.config.set('options', 'stop_on_start', "true")
+    runner.invoke(cli.start, ['project-1', '+tag1'], obj=watson)
+    runner.invoke(cli.start, ['project-1', '+tag2'], obj=watson)
+    assert watson.current['project'] == 'project-1'
+    assert set(['tag1', 'tag2']) == set(watson.current['tags'])
+
+
 # watson add
 
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
