@@ -154,7 +154,10 @@ def help(ctx, command):
     if not cmd:
         raise click.ClickException("No such command: {}".format(command))
 
-    click.echo(cmd.get_help(ctx))
+    # the passed context is that of the 'help' command, which would
+    # show up in the Usage: ... - message. Create the proper context:
+    cmd_context = click.Context(cmd, parent=ctx.parent, info_name=cmd.name)
+    click.echo(cmd.get_help(cmd_context))
 
 
 @cli.command()
