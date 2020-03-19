@@ -1,7 +1,7 @@
 PYTHON ?= python3
 PIP ?= pip
 
-VENV_DIR = $(CURDIR)/.venv
+VENV_DIR = $(CURDIR)/venv
 VENV_WATSON_DIR = $(CURDIR)/data
 
 all: install

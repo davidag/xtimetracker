@@ -13,7 +13,7 @@ __pycache__/
 site/
 .tox/
 .vagrant/
-.venv/
+venv
 .pytest_cache/
 
 # files
@@ -23,6 +23,7 @@ site/
 .env
 pip-delete-this-directory.txt
 pip-log.txt
+tags
 
 # patterns
 

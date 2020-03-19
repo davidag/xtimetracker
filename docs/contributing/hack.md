@@ -30,14 +30,14 @@ Ready to contribute? Here's how to set up *Watson* for local development.
 
 4. Install dependencies and deploy Watson inside the virtual environment:
 
-        $ source .venv/bin/activate
-        (.venv) $ make install-dev
+        $ source venv/bin/activate
+        (venv) $ make install-dev
 
-    If you are using fish shell, source `.venv/bin/activate.fish` instead.
+    If you are using fish shell, source `venv/bin/activate.fish` instead.
 
 5. Create a branch for local development:
 
-        (.venv) $ git checkout -b name-of-your-bugfix-or-feature
+        (venv) $ git checkout -b name-of-your-bugfix-or-feature
 
     Now you can make your changes locally.
 
@@ -55,12 +55,12 @@ Ready to contribute? Here's how to set up *Watson* for local development.
 6. When you're done making changes, check that your changes pass the tests
     (see [Run the tests](#run-the-tests)):
 
-        (.venv) $ tox
+        (venv) $ tox
 
 7. If you have added a new command or updated/fixed docstrings, please update
     the documentation:
 
-        (.venv) $ make docs
+        (venv) $ make docs
 
 8. Commit your changes and push your branch to GitHub:
 
