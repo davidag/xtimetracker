@@ -21,8 +21,8 @@ class Frame(namedtuple('Frame', HEADERS)):
             elif not isinstance(updated_at, arrow.Arrow):
                 updated_at = arrow.get(updated_at)
         except (ValueError, TypeError) as e:
-            from .watson import WatsonError
-            raise WatsonError("Error converting date: {}".format(e))
+            from .tt import TimeTrackerError
+            raise TimeTrackerError("Error converting date: {}".format(e))
 
         start = start.to('local')
         stop = stop.to('local')

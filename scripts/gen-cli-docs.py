@@ -4,7 +4,7 @@ import inspect
 
 from click.core import Command, Context
 from click.formatting import HelpFormatter
-from tt import cli as watson_cli
+from tt import cli as timetracker_cli
 
 
 class MarkdownFormatter(HelpFormatter):
@@ -97,7 +97,7 @@ def main(rowsput):
     ))
 
     # Iterate over commands to build docs
-    for cmd_name, cmd in inspect.getmembers(watson_cli, is_click_command):
+    for cmd_name, cmd in inspect.getmembers(timetracker_cli, is_click_command):
 
         ctx = MkdocsContext(cmd)
         formatter = MarkdownFormatter()

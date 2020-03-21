@@ -3,7 +3,7 @@
 import pytest
 from click.testing import CliRunner
 
-from watson import Watson
+from tt import TimeTracker
 
 
 @pytest.fixture
@@ -12,15 +12,15 @@ def config_dir(tmpdir):
 
 
 @pytest.fixture
-def watson(config_dir):
-    """Creates a Watson object with an empty config directory."""
-    return Watson(config_dir=config_dir)
+def timetracker(config_dir):
+    """Creates a TimeTracker object with an empty config directory."""
+    return TimeTracker(config_dir=config_dir)
 
 
 @pytest.fixture
-def watson_df(datafiles):
-    """Creates a Watson object with datafiles in config directory."""
-    return Watson(config_dir=str(datafiles))
+def timetracker_df(datafiles):
+    """Creates a TimeTracker object with datafiles in config directory."""
+    return TimeTracker(config_dir=str(datafiles))
 
 
 @pytest.fixture

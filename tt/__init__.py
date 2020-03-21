@@ -1,4 +1,5 @@
-from .watson import __version__  # noqa
-from .watson import Watson, WatsonError
+from .version import version
+from .timetracker import TimeTracker, TimeTrackerError
 
-__all__ = ['Watson', 'WatsonError']
+__all__ = ['TimeTracker', 'TimeTrackerError']
+__version__ = version

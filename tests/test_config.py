@@ -2,19 +2,19 @@
 
 import pytest
 
-from watson.config import ConfigParser
+from tt.config import ConfigParser
 
 from . import mock_read
 
 
-def test_config_get(mocker, watson):
+def test_config_get(mocker, timetracker):
     content = """
 [section]
 option1 = foo
 other_option =
     """
     mocker.patch.object(ConfigParser, 'read', mock_read(content))
-    config = watson.config
+    config = timetracker.config
     assert config.get('section', 'option1') == 'foo'
     assert config.get('section', 'other_option') == ''
     assert config.get('section', 'foo') is None
@@ -23,7 +23,7 @@ other_option =
     assert config.get('option', 'spamm', 'eggs') == 'eggs'
 
 
-def test_config_getboolean(mocker, watson):
+def test_config_getboolean(mocker, timetracker):
     content = """
 [options]
 flag1 = 1
@@ -34,7 +34,7 @@ flag5 = false
 flag6 =
     """
     mocker.patch.object(ConfigParser, 'read', mock_read(content))
-    config = watson.config
+    config = timetracker.config
     assert config.getboolean('options', 'flag1') is True
     assert config.getboolean('options', 'flag1', False) is True
     assert config.getboolean('options', 'flag2') is True
@@ -47,7 +47,7 @@ flag6 =
     assert config.getboolean('options', 'missing', True) is True
 
 
-def test_config_getint(mocker, watson):
+def test_config_getint(mocker, timetracker):
     content = """
 [options]
 value1 = 42
@@ -55,7 +55,7 @@ value2 = spamm
 value3 =
     """
     mocker.patch.object(ConfigParser, 'read', mock_read(content))
-    config = watson.config
+    config = timetracker.config
     assert config.getint('options', 'value1') == 42
     assert config.getint('options', 'value1', 666) == 42
     assert config.getint('options', 'missing') is None
@@ -71,7 +71,7 @@ value3 =
         config.getint('options', 'value3')
 
 
-def test_config_getfloat(mocker, watson):
+def test_config_getfloat(mocker, timetracker):
     content = """
 [options]
 value1 = 3.14
@@ -81,7 +81,7 @@ value4 =
     """
 
     mocker.patch.object(ConfigParser, 'read', mock_read(content))
-    config = watson.config
+    config = timetracker.config
     assert config.getfloat('options', 'value1') == 3.14
     assert config.getfloat('options', 'value1', 6.66) == 3.14
     assert config.getfloat('options', 'value2') == 42.0
@@ -98,7 +98,7 @@ value4 =
         config.getfloat('options', 'value4')
 
 
-def test_config_getlist(mocker, watson):
+def test_config_getlist(mocker, timetracker):
     content = """
 # empty lines in option values (including the first one) are discarded
 [options]
@@ -122,7 +122,7 @@ value5 = one
    four # five
 """
     mocker.patch.object(ConfigParser, 'read', mock_read(content))
-    gl = watson.config.getlist
+    gl = timetracker.config.getlist
     assert gl('options', 'value1') == ['one', 'two three', 'four',
                                        'five six']
     assert gl('options', 'value2') == ['one', 'two three', 'four',
@@ -145,9 +145,9 @@ value5 = one
         "Modifying default return value should not have side effect.")
 
 
-def test_set_config(watson):
+def test_set_config(timetracker):
     config = ConfigParser()
     config.set('foo', 'bar', 'lol')
-    watson.config = config
+    timetracker.config = config
 
-    assert watson.config.get('foo', 'bar') == 'lol'
+    assert timetracker.config.get('foo', 'bar') == 'lol'

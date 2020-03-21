@@ -7,7 +7,7 @@ import sys
 
 import arrow
 
-from tt import Watson
+from tt import TimeTracker
 
 FUZZER_PROJECTS = [
     ("apollo11", ["reactor", "module", "wheels", "steering", "brakes"]),
@@ -33,7 +33,7 @@ def get_options():
     return options
 
 
-def fill_tt_randomly(watson, project_data, allow_all_tags):
+def fill_tt_randomly(timetracker, project_data, allow_all_tags):
     now = arrow.now()
 
     for date in arrow.Arrow.range('day', now.shift(months=-1), now):
@@ -48,7 +48,7 @@ def fill_tt_randomly(watson, project_data, allow_all_tags):
             project, tags = random.choice(project_data)
             max_tags = len(tags) if allow_all_tags else len(tags) - 1
             frame_tags = random.sample(tags, random.randint(0, max_tags))
-            frame = watson.frames.add(
+            frame = timetracker.frames.add(
                 project,
                 start,
                 start.shift(seconds=random.randint(60, 4 * 60 * 60)),
@@ -60,6 +60,7 @@ if __name__ == '__main__':
     options = get_options()
     if not os.path.isdir(options.path):
         sys.exit("Invalid directory argument")
-    watson = Watson(config_dir=options.path, frames=None, current=None)
-    fill_watson_randomly(watson, FUZZER_PROJECTS, options.allow_all_tags)
-    watson.save()
+    timetracker = TimeTracker(
+        config_dir=options.path, frames=None, current=None)
+    fill_tt_randomly(timetracker, FUZZER_PROJECTS, options.allow_all_tags)
+    timetracker.save()
