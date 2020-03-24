@@ -1,6 +1,6 @@
 # Hack
 
-Ready to contribute? Here's how to set up *Watson* for local development.
+Ready to contribute? Here's how to set up *tt* for local development.
 
 ## Python requirements
 * Python (2/3) interpreter installed
@@ -9,15 +9,15 @@ Ready to contribute? Here's how to set up *Watson* for local development.
 
 ## Get started!
 
-1. Fork the [Watson repository](https://github.com/TailorDev/Watson/) on GitHub.
+1. Fork the [tt repository](https://gitlab.com/davidalfonso/tt/) on GitLab.
 
 2. Clone your fork locally:
 
-        $ git clone git@github.com:your_name_here/Watson.git
+        $ git clone git@gitlab.com:your_name_here/tt.git
 
 3. Create a virtual environment:
 
-        $ cd Watson
+        $ cd tt
         $ make env
 
     The Python version used will be the one accessible using the `python`
@@ -28,7 +28,7 @@ Ready to contribute? Here's how to set up *Watson* for local development.
 
         $ PYTHON=python3.5 make env
 
-4. Install dependencies and deploy Watson inside the virtual environment:
+4. Install dependencies and deploy tt inside the virtual environment:
 
         $ source venv/bin/activate
         (venv) $ make install-dev
@@ -43,13 +43,13 @@ Ready to contribute? Here's how to set up *Watson* for local development.
 
     _Notes:_
 
-    - The files you need to edit to change watson's behavior are located in the
-      `watson/` subfolder.
-    - Every time you run `watson` inside the virtual environment, the source
-      code inside the `watson/` subfolder will be used.
-    - To avoid messing with your real Watson data, watson will use `data/` as
+    - The files you need to edit to change tt's behavior are located in the
+      `tt/` subfolder.
+    - Every time you run `tt` inside the virtual environment, the source
+      code inside the `tt/` subfolder will be used.
+    - To avoid messing with your real tt data, tt will use `data/` as
       the [application folder](../user-guide/configuration/#application-folder)
-      inside the virtual environment. You can run `watson projects` to check
+      inside the virtual environment. You can run `tt projects` to check
       that your real projects are not shown.
 
 6. When you're done making changes, check that your changes pass the tests
@@ -62,14 +62,14 @@ Ready to contribute? Here's how to set up *Watson* for local development.
 
         (venv) $ make docs
 
-8. Commit your changes and push your branch to GitHub:
+8. Commit your changes and push your branch to GitLab:
 
         $ git add .
         $ git commit -m "Your detailed description of your changes."
         $ git push -u origin name-of-your-bugfix-or-feature
 
 9. After [reading this](./pr-guidelines.md), submit a pull request through the
-    GitHub website.
+    GitLab website.
 
 <a href="#run-the-tests"></a>
 ## Run the tests

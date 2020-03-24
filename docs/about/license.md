@@ -1,7 +1,8 @@
 # License
 
-## Watson License (MIT)
+## Tt license (MIT)
 
+Copyright (c) 2020 David Alfonso
 Copyright (c) 2015 Tailordev
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

@@ -18,7 +18,7 @@ Before we merge a pull request, we check that it meets these guidelines:
     commits](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html)
     too. This is used to "clean" your pull request before merging it (we
     don't want commits such as fix tests, fix 2, fix 3, etc.).
-3.  While creating your pull request on GitHub, you **must** write a
+3.  While creating your pull request on GitLab, you **must** write a
     description which gives the context and/or explains why you are
     creating it.
 4.  The pull request **should** include tests.
