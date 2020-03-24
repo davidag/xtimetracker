@@ -1,7 +1,7 @@
 # How to contribute?
 
 If you are reading this, we thank you in advance for willing to
-contribute to the Watson project! You are awesome.
+contribute to the tt project! You are awesome.
 
 > **Disclaimer**
 >
@@ -11,7 +11,7 @@ contribute to the Watson project! You are awesome.
 
 ## Report bugs
 
-Report bugs at <https://github.com/TailorDev/Watson/issues/new>
+Report bugs at <https://gitlab.com/davidalfonso/tt/-/issues>
 
 If you are reporting a bug, please include:
 
@@ -21,18 +21,18 @@ If you are reporting a bug, please include:
 
 ## Fix bugs
 
-Check out the [open bugs](https://github.com/TailorDev/Watson/issues) -
+Check out the [open bugs](https://gitlab.com/davidalfonso/tt/-/issues) -
 anything tagged with the **[easy-pick]** label could be a good choice
 for newcomers.
 
 ## Implement features
 
-Look through the GitHub issues for features. Anything tagged with
+Look through the GitLab issues for features. Anything tagged with
 **[enhancement]** is open to whoever wants to implement it.
 
 ## Write documentation
 
-*Watson* could always use more documentation, whether as part of the
+*tt* could always use more documentation, whether as part of the
 official docs, in docstrings, or even on the Web in blog posts,
 articles, and such.
 
@@ -42,7 +42,7 @@ Any issue with the **[question]** label is open for feedback, so feel
 free to share your thoughts with us!
 
 The best way to send feedback is to [fill a new
-issue](https://github.com/TailorDev/Watson/issues/new) on GitHub.
+issue](https://gitlab.com/davidalfonso/tt/-/issues/new) on GitLab.
 
 If you are proposing a feature:
 

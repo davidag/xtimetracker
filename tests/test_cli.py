@@ -7,7 +7,7 @@ from dateutil.tz import tzlocal
 import arrow
 import pytest
 
-from watson import cli
+from tt import cli
 
 from . import TEST_FIXTURE_DIR
 
@@ -87,25 +87,25 @@ class OutputParser:
         return OutputParser.FRAME_ID_PATTERN.search(output).group('frame_id')
 
     @staticmethod
-    def get_start_date(watson, output):
+    def get_start_date(timetracker, output):
         frame_id = OutputParser.get_frame_id(output)
-        return watson.frames[frame_id].start.format('YYYY-MM-DD HH:mm:ss')
+        return timetracker.frames[frame_id].start.format('YYYY-MM-DD HH:mm:ss')
 
 
-# watson start
+# tt start
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-def test_start_doesnt_support_frame_references(runner, watson_df):
+def test_start_doesnt_support_frame_references(runner, timetracker_df):
     result = runner.invoke(
         cli.start,
         ['-1'],
-        obj=watson_df)
+        obj=timetracker_df)
     assert result.exit_code == 2  # -1 option not allowed
-    frame = watson_df.frames['e935a543']
+    frame = timetracker_df.frames['e935a543']
     result = runner.invoke(
         cli.start,
         [str(frame.id)],
-        obj=watson_df)
+        obj=timetracker_df)
     assert result.exit_code == 0
     assert frame.project not in result.output
     assert 'e935a543' in result.output
@@ -128,15 +128,15 @@ def test_start_doesnt_support_frame_references(runner, watson_df):
     ]
 )
 def test_start_with_already_started_project(
-        runner, watson, gap, stop, cfg, error):
-    watson.config.set('options', 'stop_on_start', str(cfg))
-    assert watson.config.getboolean('options', 'stop_on_start') == cfg
-    result = runner.invoke(cli.start, 'project-1', obj=watson)
+        runner, timetracker, gap, stop, cfg, error):
+    timetracker.config.set('options', 'stop_on_start', str(cfg))
+    assert timetracker.config.getboolean('options', 'stop_on_start') == cfg
+    result = runner.invoke(cli.start, 'project-1', obj=timetracker)
     assert result.exit_code == 0
     result = runner.invoke(
         cli.start,
         ['project-2', gap, stop],
-        obj=watson)
+        obj=timetracker)
     if error:
         assert result.exit_code == 1
         assert 'Error' in result.output
@@ -145,182 +145,184 @@ def test_start_with_already_started_project(
         assert 'Error' not in result.output
 
 
-def test_start_restart_running_frame(runner, watson):
-    watson.config.set('options', 'stop_on_start', "true")
-    result = runner.invoke(cli.start, ['project-1', '+mytag'], obj=watson)
+def test_start_restart_running_frame(runner, timetracker):
+    timetracker.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(cli.start, ['project-1', '+mytag'], obj=timetracker)
     assert result.exit_code == 0
-    assert len(watson.frames) == 0
-    result = runner.invoke(cli.start, ['-r'], obj=watson)
+    assert len(timetracker.frames) == 0
+    result = runner.invoke(cli.start, ['-r'], obj=timetracker)
     assert result.exit_code == 0
-    assert len(watson.frames) == 1
-    assert watson.current['project'] == 'project-1'
-    assert {'mytag'} == set(watson.current['tags'])
+    assert len(timetracker.frames) == 1
+    assert timetracker.current['project'] == 'project-1'
+    assert {'mytag'} == set(timetracker.current['tags'])
 
 
-def test_start_restart_running_frame_plus_tags(runner, watson):
-    watson.config.set('options', 'stop_on_start', "true")
-    result = runner.invoke(cli.start, ['project-1', '+tag1'], obj=watson)
+def test_start_restart_running_frame_plus_tags(runner, timetracker):
+    timetracker.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(cli.start, ['project-1', '+tag1'], obj=timetracker)
     assert result.exit_code == 0
-    assert len(watson.frames) == 0
-    result = runner.invoke(cli.start, ['-r', '+tag2', '+a tag'], obj=watson)
+    assert len(timetracker.frames) == 0
+    result = runner.invoke(
+        cli.start, ['-r', '+tag2', '+a tag'], obj=timetracker)
     assert result.exit_code == 0
-    assert watson.current['project'] == 'project-1'
-    assert len(watson.frames) == 1
-    assert set(['tag1', 'tag2', 'a tag']) == set(watson.current['tags'])
+    assert timetracker.current['project'] == 'project-1'
+    assert len(timetracker.frames) == 1
+    assert set(['tag1', 'tag2', 'a tag']) == set(timetracker.current['tags'])
 
 
-def test_start_restart_last_frame(runner, watson):
-    watson.config.set('options', 'stop_on_start', "true")
-    result = runner.invoke(cli.start, 'project-1', obj=watson)
+def test_start_restart_last_frame(runner, timetracker):
+    timetracker.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(cli.start, 'project-1', obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(cli.stop, obj=watson)
+    result = runner.invoke(cli.stop, obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(cli.start, ['-r'], obj=watson)
+    result = runner.invoke(cli.start, ['-r'], obj=timetracker)
     assert result.exit_code == 0
-    assert watson.current['project'] == 'project-1'
-    assert len(watson.frames) == 1
+    assert timetracker.current['project'] == 'project-1'
+    assert len(timetracker.frames) == 1
 
 
-def test_start_restart_last_frame_plus_tags(runner, watson):
-    watson.config.set('options', 'stop_on_start', "true")
-    result = runner.invoke(cli.start, ['project-1', '+tag1'], obj=watson)
+def test_start_restart_last_frame_plus_tags(runner, timetracker):
+    timetracker.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(cli.start, ['project-1', '+tag1'], obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(cli.stop, obj=watson)
+    result = runner.invoke(cli.stop, obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(cli.start, ['-r', '+tag2'], obj=watson)
+    result = runner.invoke(cli.start, ['-r', '+tag2'], obj=timetracker)
     assert result.exit_code == 0
-    assert len(watson.frames) == 1
-    assert watson.current['project'] == 'project-1'
-    assert set(['tag1', 'tag2']) == set(watson.current['tags'])
+    assert len(timetracker.frames) == 1
+    assert timetracker.current['project'] == 'project-1'
+    assert set(['tag1', 'tag2']) == set(timetracker.current['tags'])
 
 
-def test_start_restart_last_project_frame(runner, watson):
-    watson.config.set('options', 'stop_on_start', "true")
+def test_start_restart_last_project_frame(runner, timetracker):
+    timetracker.config.set('options', 'stop_on_start', "true")
     result = runner.invoke(
         cli.add,
         ['-f 10:00', '-t 11:00', 'project-1', '+mytag1'],
-        obj=watson
+        obj=timetracker
     )
     assert result.exit_code == 0
     result = runner.invoke(
         cli.add,
         ['-f 08:00', '-t 09:00', 'project-1', '+mytag2'],
-        obj=watson
+        obj=timetracker
     )
     assert result.exit_code == 0
-    result = runner.invoke(cli.start, ['-r', 'project-1'], obj=watson)
+    result = runner.invoke(cli.start, ['-r', 'project-1'], obj=timetracker)
     assert result.exit_code == 0
-    assert watson.current['project'] == 'project-1'
-    assert {'mytag1'} == set(watson.current['tags'])
+    assert timetracker.current['project'] == 'project-1'
+    assert {'mytag1'} == set(timetracker.current['tags'])
 
 
-def test_start_restart_last_project_frame_plus_tags(runner, watson):
-    watson.config.set('options', 'stop_on_start', "true")
+def test_start_restart_last_project_frame_plus_tags(runner, timetracker):
+    timetracker.config.set('options', 'stop_on_start', "true")
     result = runner.invoke(
         cli.add,
         ['-f 10:00', '-t 11:00', 'project-1', '+mytag1'],
-        obj=watson
+        obj=timetracker
     )
     assert result.exit_code == 0
     result = runner.invoke(
         cli.add,
         ['-f 08:00', '-t 09:00', 'project-1', '+mytag2'],
-        obj=watson
+        obj=timetracker
     )
     assert result.exit_code == 0
-    result = runner.invoke(cli.start, ['-r', 'project-1', '+tagA'], obj=watson)
+    result = runner.invoke(
+        cli.start, ['-r', 'project-1', '+tagA'], obj=timetracker)
     assert result.exit_code == 0
-    assert watson.current['project'] == 'project-1'
-    assert {'tagA', 'mytag1'} == set(watson.current['tags'])
+    assert timetracker.current['project'] == 'project-1'
+    assert {'tagA', 'mytag1'} == set(timetracker.current['tags'])
 
 
-def test_start_restart_new_project_does_not_fail(runner, watson):
-    watson.config.set('options', 'restart_on_start', "true")
-    runner.invoke(cli.start, ['project-1'], obj=watson)
-    assert watson.current['project'] == 'project-1'
+def test_start_restart_new_project_does_not_fail(runner, timetracker):
+    timetracker.config.set('options', 'restart_on_start', "true")
+    runner.invoke(cli.start, ['project-1'], obj=timetracker)
+    assert timetracker.current['project'] == 'project-1'
 
 
-def test_start_restart_config_option_last_frame(runner, watson):
-    watson.config.set('options', 'restart_on_start', "true")
-    runner.invoke(cli.start, ['project-1', '+tag1'], obj=watson)
-    runner.invoke(cli.stop, obj=watson)
-    runner.invoke(cli.start, ['project-1', '+tag2'], obj=watson)
-    assert watson.current['project'] == 'project-1'
-    assert set(['tag1', 'tag2']) == set(watson.current['tags'])
+def test_start_restart_config_option_last_frame(runner, timetracker):
+    timetracker.config.set('options', 'restart_on_start', "true")
+    runner.invoke(cli.start, ['project-1', '+tag1'], obj=timetracker)
+    runner.invoke(cli.stop, obj=timetracker)
+    runner.invoke(cli.start, ['project-1', '+tag2'], obj=timetracker)
+    assert timetracker.current['project'] == 'project-1'
+    assert set(['tag1', 'tag2']) == set(timetracker.current['tags'])
 
 
-def test_start_restart_config_option_current(runner, watson):
-    watson.config.set('options', 'restart_on_start', "true")
-    watson.config.set('options', 'stop_on_start', "true")
-    runner.invoke(cli.start, ['project-1', '+tag1'], obj=watson)
-    runner.invoke(cli.start, ['project-1', '+tag2'], obj=watson)
-    assert watson.current['project'] == 'project-1'
-    assert set(['tag1', 'tag2']) == set(watson.current['tags'])
+def test_start_restart_config_option_current(runner, timetracker):
+    timetracker.config.set('options', 'restart_on_start', "true")
+    timetracker.config.set('options', 'stop_on_start', "true")
+    runner.invoke(cli.start, ['project-1', '+tag1'], obj=timetracker)
+    runner.invoke(cli.start, ['project-1', '+tag2'], obj=timetracker)
+    assert timetracker.current['project'] == 'project-1'
+    assert set(['tag1', 'tag2']) == set(timetracker.current['tags'])
 
 
-# watson add
+# tt add
 
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
-def test_add_valid_date(runner, watson, test_dt, expected):
+def test_add_valid_date(runner, timetracker, test_dt, expected):
     result = runner.invoke(
         cli.add,
         ['-f', test_dt, '-t', test_dt, 'project-name'],
-        obj=watson)
+        obj=timetracker)
     assert result.exit_code == 0
-    assert OutputParser.get_start_date(watson, result.output) == expected
+    assert OutputParser.get_start_date(timetracker, result.output) == expected
 
 
 @pytest.mark.parametrize('test_dt', INVALID_DATES_DATA)
-def test_add_invalid_date(runner, watson, test_dt):
+def test_add_invalid_date(runner, timetracker, test_dt):
     result = runner.invoke(cli.add,
                            ['-f', test_dt, '-t', test_dt, 'project-name'],
-                           obj=watson)
+                           obj=timetracker)
     assert result.exit_code != 0
 
 
-# watson aggregate
+# tt aggregate
 
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
-def test_aggregate_valid_date(runner, watson, test_dt, expected):
+def test_aggregate_valid_date(runner, timetracker, test_dt, expected):
     # This is super fast, because no internal 'report' invocations are made
     result = runner.invoke(cli.aggregate,
                            ['-f', test_dt, '-t', test_dt],
-                           obj=watson)
+                           obj=timetracker)
     assert result.exit_code == 0
 
 
 @pytest.mark.parametrize('test_dt', INVALID_DATES_DATA)
-def test_aggregate_invalid_date(runner, watson, test_dt):
+def test_aggregate_invalid_date(runner, timetracker, test_dt):
     # This is super fast, because no internal 'report' invocations are made
     result = runner.invoke(cli.aggregate,
                            ['-f', test_dt, '-t', test_dt],
-                           obj=watson)
+                           obj=timetracker)
     assert result.exit_code != 0
 
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-def test_aggregate_exclude_project(runner, watson_df):
-    result = runner.invoke(cli.aggregate, ['-f', '2019'], obj=watson_df)
+def test_aggregate_exclude_project(runner, timetracker_df):
+    result = runner.invoke(cli.aggregate, ['-f', '2019'], obj=timetracker_df)
     assert result.exit_code == 0 and 'hubble' in result.output
     result = runner.invoke(cli.aggregate,
-                           ['-f', '2019', '-P', 'hubble'], obj=watson_df)
+                           ['-f', '2019', '-P', 'hubble'], obj=timetracker_df)
     assert result.exit_code == 0 and 'hubble' not in result.output
 
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-def test_aggregate_exclude_tag(runner, watson_df):
-    result = runner.invoke(cli.aggregate, ['-f', '2019'], obj=watson_df)
+def test_aggregate_exclude_tag(runner, timetracker_df):
+    result = runner.invoke(cli.aggregate, ['-f', '2019'], obj=timetracker_df)
     assert result.exit_code == 0 and 'reactor' in result.output
     result = runner.invoke(cli.aggregate,
-                           ['-f', '2019', '-A', 'reactor'], obj=watson_df)
+                           ['-f', '2019', '-A', 'reactor'], obj=timetracker_df)
     assert result.exit_code == 0 and 'reactor' not in result.output
 
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-def test_aggregate_one_day(runner, watson_df):
+def test_aggregate_one_day(runner, timetracker_df):
     result = runner.invoke(cli.aggregate,
                            ['--json', '-f', '2019-10-31', '-t', '2019-11-01'],
-                           obj=watson_df)
+                           obj=timetracker_df)
     assert result.exit_code == 0
     report = json.loads(result.output)
     total_time = sum(r['time'] for r in report)
@@ -328,14 +330,14 @@ def test_aggregate_one_day(runner, watson_df):
 
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-def test_aggregate_include_current(runner, watson_df, mocker):
+def test_aggregate_include_current(runner, timetracker_df, mocker):
     # Warning: mocking this forces to use arrow.datetime when substracting
     # dates, because Arrow.__sub__() uses isinstance(other, datetime)
     # and after this patch, datetime is no longer a valid type.
     mocker.patch('arrow.arrow.datetime', wraps=datetime)
     start_dt = datetime(2019, 11, 1, 0, 0, 0, tzinfo=tzlocal())
     arrow.arrow.datetime.now.return_value = start_dt
-    result = runner.invoke(cli.start, ['a-project'], obj=watson_df)
+    result = runner.invoke(cli.start, ['a-project'], obj=timetracker_df)
     assert result.exit_code == 0
     # Simulate one hour has elapsed so that the current frame lasts exactly
     # one hour.
@@ -343,7 +345,7 @@ def test_aggregate_include_current(runner, watson_df, mocker):
     result = runner.invoke(
         cli.aggregate,
         ['-c', '--json', '-f', '2019-10-31', '-t', '2019-11-01'],
-        obj=watson_df
+        obj=timetracker_df
     )
     assert result.exit_code == 0
     report = json.loads(result.output)
@@ -352,11 +354,11 @@ def test_aggregate_include_current(runner, watson_df, mocker):
 
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-def test_aggregate_dont_include_current(runner, watson_df, mocker):
+def test_aggregate_dont_include_current(runner, timetracker_df, mocker):
     mocker.patch('arrow.arrow.datetime', wraps=datetime)
     start_dt = datetime(2019, 11, 1, 0, 0, 0, tzinfo=tzlocal())
     arrow.arrow.datetime.now.return_value = start_dt
-    result = runner.invoke(cli.start, ['a-project'], obj=watson_df)
+    result = runner.invoke(cli.start, ['a-project'], obj=timetracker_df)
     assert result.exit_code == 0
     # Simulate one hour has elapsed so that the current frame lasts exactly
     # one hour.
@@ -364,7 +366,7 @@ def test_aggregate_dont_include_current(runner, watson_df, mocker):
     result = runner.invoke(
         cli.aggregate,
         ['--json', '-f', '2019-10-31', '-t', '2019-11-01'],
-        obj=watson_df
+        obj=timetracker_df
     )
     assert result.exit_code == 0
     report = json.loads(result.output)
@@ -373,78 +375,80 @@ def test_aggregate_dont_include_current(runner, watson_df, mocker):
 
 
 @pytest.mark.parametrize('cmd', [cli.aggregate, cli.log, cli.report])
-def test_incompatible_options(runner, watson, cmd):
+def test_incompatible_options(runner, timetracker, cmd):
     name_interval_options = ['--' + s for s in cli._SHORTCUT_OPTIONS]
     for opt1, opt2 in combinations(name_interval_options, 2):
-        result = runner.invoke(cmd, [opt1, opt2], obj=watson)
+        result = runner.invoke(cmd, [opt1, opt2], obj=timetracker)
         assert result.exit_code != 0
 
 
-# watson log
+# tt log
 
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
-def test_log_valid_date(runner, watson, test_dt, expected):
-    result = runner.invoke(cli.log, ['-f', test_dt, '-t', test_dt], obj=watson)
+def test_log_valid_date(runner, timetracker, test_dt, expected):
+    result = runner.invoke(
+        cli.log, ['-f', test_dt, '-t', test_dt], obj=timetracker)
     assert result.exit_code == 0
 
 
 @pytest.mark.parametrize('test_dt', INVALID_DATES_DATA)
-def test_log_invalid_date(runner, watson, test_dt):
-    result = runner.invoke(cli.log, ['-f', test_dt, '-t', test_dt], obj=watson)
+def test_log_invalid_date(runner, timetracker, test_dt):
+    result = runner.invoke(
+        cli.log, ['-f', test_dt, '-t', test_dt], obj=timetracker)
     assert result.exit_code != 0
 
 
-# watson report
+# tt report
 
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
-def test_report_valid_date(runner, watson, test_dt, expected):
+def test_report_valid_date(runner, timetracker, test_dt, expected):
     result = runner.invoke(cli.report,
                            ['-f', test_dt, '-t', test_dt],
-                           obj=watson)
+                           obj=timetracker)
     assert result.exit_code == 0
 
 
 @pytest.mark.parametrize('test_dt', INVALID_DATES_DATA)
-def test_report_invalid_date(runner, watson, test_dt):
+def test_report_invalid_date(runner, timetracker, test_dt):
     result = runner.invoke(cli.report,
                            ['-f', test_dt, '-t', test_dt],
-                           obj=watson)
+                           obj=timetracker)
     assert result.exit_code != 0
 
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-def test_report_one_day(runner, watson_df):
+def test_report_one_day(runner, timetracker_df):
     result = runner.invoke(cli.report,
                            ['--json', '-f', '2019-10-31', '-t', '2019-11-01'],
-                           obj=watson_df)
+                           obj=timetracker_df)
     assert result.exit_code == 0
     report = json.loads(result.output)
     assert report['time'] == 20001.0
 
 
-# watson stop
+# tt stop
 
 @pytest.mark.parametrize('at_dt', VALID_TIMES_DATA)
-def test_stop_valid_time(runner, watson, mocker, at_dt):
+def test_stop_valid_time(runner, timetracker, mocker, at_dt):
     mocker.patch('arrow.arrow.datetime', wraps=datetime)
     start_dt = datetime(2019, 4, 10, 14, 0, 0, tzinfo=tzlocal())
     arrow.arrow.datetime.now.return_value = start_dt
-    result = runner.invoke(cli.start, ['a-project'], obj=watson)
+    result = runner.invoke(cli.start, ['a-project'], obj=timetracker)
     assert result.exit_code == 0
     # Simulate one hour has elapsed, so that 'at_dt' is older than now()
     # but newer than the start date.
     arrow.arrow.datetime.now.return_value = (start_dt + timedelta(hours=1))
-    result = runner.invoke(cli.stop, ['--at', at_dt], obj=watson)
+    result = runner.invoke(cli.stop, ['--at', at_dt], obj=timetracker)
     assert result.exit_code == 0
 
 
-# watson projects
+# tt projects
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
 @pytest.mark.parametrize('all_projects', [
     (['apollo11', 'hubble', 'voyager1', 'voyager2'])])
-def test_projects_no_filtering(runner, watson_df, all_projects):
-    result = runner.invoke(cli.projects, [], obj=watson_df)
+def test_projects_no_filtering(runner, timetracker_df, all_projects):
+    result = runner.invoke(cli.projects, [], obj=timetracker_df)
     assert result.exit_code == 0
     assert set(result.output.splitlines()) == set(all_projects)
 
@@ -455,8 +459,8 @@ def test_projects_no_filtering(runner, watson_df, all_projects):
     ('reactor', ['apollo11']),
     ('lens', ['hubble']),
     ])
-def test_projects_filter_by_tag(runner, watson_df, tag, projects):
-    result = runner.invoke(cli.projects, [tag], obj=watson_df)
+def test_projects_filter_by_tag(runner, timetracker_df, tag, projects):
+    result = runner.invoke(cli.projects, [tag], obj=timetracker_df)
     assert result.exit_code == 0
     assert set(result.output.splitlines()) == set(projects)
 
@@ -468,13 +472,14 @@ def test_projects_filter_by_tag(runner, watson_df, tag, projects):
     (['reactor', 'brakes'], ['apollo11']),
     (['lens', 'reactor'], []),
     ])
-def test_projects_filter_by_multiple_tags(runner, watson_df, tags, projects):
-    result = runner.invoke(cli.projects, tags, obj=watson_df)
+def test_projects_filter_by_multiple_tags(runner, timetracker_df, tags,
+                                          projects):
+    result = runner.invoke(cli.projects, tags, obj=timetracker_df)
     assert result.exit_code == 0
     assert set(result.output.splitlines()) == set(projects)
 
 
-# watson tags
+# tt tags
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
 @pytest.mark.parametrize('all_tags', [
@@ -482,8 +487,8 @@ def test_projects_filter_by_multiple_tags(runner, watson_df, tags, projects):
       'camera', 'transmission', 'probe', 'generators', 'sensors',
       'antenna', 'orbiter']),
     ])
-def test_tags_no_filtering(runner, watson_df, all_tags):
-    result = runner.invoke(cli.tags, [], obj=watson_df)
+def test_tags_no_filtering(runner, timetracker_df, all_tags):
+    result = runner.invoke(cli.tags, [], obj=timetracker_df)
     assert result.exit_code == 0
     assert set(result.output.splitlines()) == set(all_tags)
 
@@ -496,8 +501,8 @@ def test_tags_no_filtering(runner, watson_df, all_tags):
     ('voyager1', ['probe', 'generators', 'sensors', 'antenna']),
     ('voyager2', ['probe', 'orbiter', 'sensors', 'antenna']),
     ])
-def test_tags_filter_by_project(runner, watson_df, project, tags):
-    result = runner.invoke(cli.tags, project, obj=watson_df)
+def test_tags_filter_by_project(runner, timetracker_df, project, tags):
+    result = runner.invoke(cli.tags, project, obj=timetracker_df)
     assert result.exit_code == 0
     assert set(result.output.splitlines()) == set(tags)
 
@@ -508,7 +513,8 @@ def test_tags_filter_by_project(runner, watson_df, project, tags):
     (['hubble', 'apollo11'], []),
     (['voyager1', 'apollo11'], []),
     ])
-def test_tags_filter_by_multiple_projects(runner, watson_df, projects, tags):
-    result = runner.invoke(cli.tags, projects, obj=watson_df)
+def test_tags_filter_by_multiple_projects(runner, timetracker_df, projects,
+                                          tags):
+    result = runner.invoke(cli.tags, projects, obj=timetracker_df)
     assert result.exit_code == 0
     assert set(result.output.splitlines()) == set(tags)

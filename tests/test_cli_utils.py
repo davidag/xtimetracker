@@ -1,11 +1,10 @@
-"""Unit tests for the 'utils' module."""
+"""Unit tests for the 'cli_utils' module."""
 
 import arrow
 import collections as co
 import csv
 import functools
 import json
-import os
 import datetime
 import pytest
 from io import StringIO
@@ -13,7 +12,7 @@ from unittest.mock import patch
 from click.exceptions import Abort
 from dateutil.tz import tzutc
 
-from watson.utils import (
+from tt.cli_utils import (
     apply_weekday_offset,
     build_csv,
     confirm_project,
@@ -23,8 +22,6 @@ from watson.utils import (
     frames_to_json,
     get_start_time_for_period,
     get_last_frame_from_project,
-    make_json_writer,
-    safe_save,
     parse_tags,
     json_encoder,
 )
@@ -70,109 +67,6 @@ def test_apply_weekday_offset(monday_start, week_start, new_start):
         assert apply_weekday_offset(original_start, week_start) == result
 
 
-def test_make_json_writer():
-    fp = StringIO()
-    writer = make_json_writer(lambda: {'foo': 42})
-    writer(fp)
-    assert fp.getvalue() == '{\n "foo": 42\n}'
-
-
-def test_make_json_writer_with_args():
-    fp = StringIO()
-    writer = make_json_writer(lambda x: {'foo': x}, 23)
-    writer(fp)
-    assert fp.getvalue() == '{\n "foo": 23\n}'
-
-
-def test_make_json_writer_with_kwargs():
-    fp = StringIO()
-    writer = make_json_writer(lambda foo=None: {'foo': foo}, foo='bar')
-    writer(fp)
-    assert fp.getvalue() == '{\n "foo": "bar"\n}'
-
-
-def test_make_json_writer_with_unicode():
-    fp = StringIO()
-    writer = make_json_writer(lambda: {'ùñï©ôð€': 'εvεrywhεrε'})
-    writer(fp)
-    expected = '{\n "ùñï©ôð€": "εvεrywhεrε"\n}'
-    assert fp.getvalue() == expected
-
-
-def test_safe_save(config_dir):
-    save_file = os.path.join(config_dir, 'test')
-    backup_file = os.path.join(config_dir, 'test' + '.bak')
-
-    assert not os.path.exists(save_file)
-    safe_save(save_file, lambda f: f.write("Success"))
-    assert os.path.exists(save_file)
-    assert not os.path.exists(backup_file)
-
-    with open(save_file) as fp:
-        assert fp.read() == "Success"
-
-    safe_save(save_file, "Again")
-    assert os.path.exists(backup_file)
-
-    with open(save_file) as fp:
-        assert fp.read() == "Again"
-
-    with open(backup_file) as fp:
-        assert fp.read() == "Success"
-
-    assert os.path.getmtime(save_file) >= os.path.getmtime(backup_file)
-
-
-def test_safe_save_tmpfile_on_other_filesystem(config_dir, mocker):
-    save_file = os.path.join(config_dir, 'test')
-    backup_file = os.path.join(config_dir, 'test' + '.bak')
-
-    assert not os.path.exists(save_file)
-    safe_save(save_file, lambda f: f.write("Success"))
-    assert os.path.exists(save_file)
-    assert not os.path.exists(backup_file)
-
-    with open(save_file) as fp:
-        assert fp.read() == "Success"
-
-    # simulate tmpfile being on another file-system
-    # OSError is caught and handled by shutil.move() used by save_safe()
-    mocker.patch('os.rename', side_effect=OSError)
-    safe_save(save_file, "Again")
-    assert os.path.exists(backup_file)
-
-    with open(save_file) as fp:
-        assert fp.read() == "Again"
-
-
-def test_safe_save_with_exception(config_dir):
-    save_file = os.path.join(config_dir, 'test')
-    backup_file = os.path.join(config_dir, 'test' + '.bak')
-
-    def failing_writer(f):
-        raise RuntimeError("Save failed.")
-
-    assert not os.path.exists(save_file)
-
-    with pytest.raises(RuntimeError):
-        safe_save(save_file, failing_writer)
-
-    assert not os.path.exists(save_file)
-    assert not os.path.exists(backup_file)
-
-    safe_save(save_file, lambda f: f.write("Success"))
-    assert os.path.exists(save_file)
-    assert not os.path.exists(backup_file)
-
-    with pytest.raises(RuntimeError):
-        safe_save(save_file, failing_writer)
-
-    with open(save_file) as fp:
-        assert fp.read() == "Success"
-
-    assert not os.path.exists(backup_file)
-
-
 @pytest.mark.parametrize('args, parsed_tags', [
     (['+ham', '+n', '+eggs'], ['ham', 'n', 'eggs']),
     (['+ham', 'n', '+eggs'], ['ham n', 'eggs']),
@@ -187,44 +81,44 @@ def test_parse_tags(args, parsed_tags):
 
 def test_confirm_project_existing_project_returns_true():
     project = 'foo'
-    watson_projects = ['foo', 'bar']
-    assert confirm_project(project, watson_projects)
+    timetracker_projects = ['foo', 'bar']
+    assert confirm_project(project, timetracker_projects)
 
 
 @patch('click.confirm', return_value=True)
 def test_confirm_project_accept_returns_true(confirm):
     project = 'baz'
-    watson_projects = ['foo', 'bar']
-    assert confirm_project(project, watson_projects)
+    timetracker_projects = ['foo', 'bar']
+    assert confirm_project(project, timetracker_projects)
 
 
-@patch('watson.utils.click.confirm', side_effect=Abort)
+@patch('tt.cli_utils.click.confirm', side_effect=Abort)
 def test_confirm_project_reject_raises_abort(confirm):
     project = 'baz'
-    watson_projects = ['foo', 'bar']
+    timetracker_projects = ['foo', 'bar']
     with pytest.raises(Abort):
-        confirm_project(project, watson_projects)
+        confirm_project(project, timetracker_projects)
 
 
 def test_confirm_tags_existing_tag_returns_true():
     tags = ['a']
-    watson_tags = ['a', 'b']
-    assert confirm_tags(tags, watson_tags)
+    timetracker_tags = ['a', 'b']
+    assert confirm_tags(tags, timetracker_tags)
 
 
 @patch('click.confirm', return_value=True)
 def test_confirm_tags_accept_returns_true(confirm):
     tags = ['c']
-    watson_tags = ['a', 'b']
-    assert confirm_tags(tags, watson_tags)
+    timetracker_tags = ['a', 'b']
+    assert confirm_tags(tags, timetracker_tags)
 
 
 @patch('click.confirm', side_effect=Abort)
 def test_confirm_tags_reject_raises_abort(confirm):
     tags = ['c']
-    watson_tags = ['a', 'b']
+    timetracker_tags = ['a', 'b']
     with pytest.raises(Abort):
-        confirm_project(tags[0], watson_tags)
+        confirm_project(tags[0], timetracker_tags)
 
 
 # build_csv
@@ -261,15 +155,15 @@ def test_build_csv_multiple_cols():
 
 # frames_to_csv
 
-def test_frames_to_csv_empty_data(watson):
-    assert frames_to_csv(watson.frames) == ''
+def test_frames_to_csv_empty_data(timetracker):
+    assert frames_to_csv(timetracker.frames) == ''
 
 
-def test_frames_to_csv(watson):
-    watson.start('foo', tags=['A', 'B'])
-    watson.stop()
+def test_frames_to_csv(timetracker):
+    timetracker.start('foo', tags=['A', 'B'])
+    timetracker.stop()
 
-    result = frames_to_csv(watson.frames)
+    result = frames_to_csv(timetracker.frames)
 
     read_csv = list(csv.reader(StringIO(result)))
     header = ['id', 'start', 'stop', 'project', 'tags']
@@ -281,15 +175,15 @@ def test_frames_to_csv(watson):
 
 # frames_to_json
 
-def test_frames_to_json_empty_data(watson):
-    assert frames_to_json(watson.frames) == '[]'
+def test_frames_to_json_empty_data(timetracker):
+    assert frames_to_json(timetracker.frames) == '[]'
 
 
-def test_frames_to_json(watson):
-    watson.start('foo', tags=['A', 'B'])
-    watson.stop()
+def test_frames_to_json(timetracker):
+    timetracker.start('foo', tags=['A', 'B'])
+    timetracker.stop()
 
-    result = json.loads(frames_to_json(watson.frames))
+    result = json.loads(frames_to_json(timetracker.frames))
 
     keys = {'id', 'start', 'stop', 'project', 'tags'}
     assert len(result) == 1
@@ -300,15 +194,15 @@ def test_frames_to_json(watson):
 
 # flatten_report_for_csv
 
-def test_flatten_report_for_csv(watson):
+def test_flatten_report_for_csv(timetracker):
     now = arrow.utcnow().ceil('hour')
-    watson.add('foo', now.shift(hours=-4), now, ['A', 'B'])
-    watson.add('foo', now.shift(hours=-5), now.shift(hours=-4), ['A'])
-    watson.add('foo', now.shift(hours=-7), now.shift(hours=-5), ['B'])
+    timetracker.add('foo', now.shift(hours=-4), now, ['A', 'B'])
+    timetracker.add('foo', now.shift(hours=-5), now.shift(hours=-4), ['A'])
+    timetracker.add('foo', now.shift(hours=-7), now.shift(hours=-5), ['B'])
 
     start = now.shift(days=-1)
     stop = now
-    result = flatten_report_for_csv(watson.report(start, stop))
+    result = flatten_report_for_csv(timetracker.report(start, stop))
 
     assert len(result) == 3
 
@@ -350,9 +244,10 @@ def test_json_encoder():
 # get_last_frame_from_project
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-def test_get_last_frame_from_project(watson_df):
-    assert get_last_frame_from_project(watson_df, "invalid_project") is None
+def test_get_last_frame_from_project(timetracker_df):
+    assert get_last_frame_from_project(timetracker_df,
+                                       "invalid_project") is None
 
-    frame = get_last_frame_from_project(watson_df, "hubble")
+    frame = get_last_frame_from_project(timetracker_df, "hubble")
     assert frame.project == "hubble"
     assert set(frame.tags) == {"transmission", "camera"}

@@ -1,5 +1,5 @@
 try:
-    from watson import cli
+    from tt import cli
 except ImportError:
     from . import cli
 

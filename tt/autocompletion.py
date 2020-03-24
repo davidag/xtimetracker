@@ -1,5 +1,5 @@
 from functools import wraps
-from .utils import create_watson, parse_tags
+from .cli_utils import create_timetracker, parse_tags
 
 
 def get_rename_name(ctx, args, incomplete):
@@ -39,7 +39,7 @@ def patch_click_ctx_object(func):
         elif 'ctx' in kwargs:
             ctx = kwargs['ctx']
         if ctx.obj is None:
-            ctx.obj = create_watson()
+            ctx.obj = create_timetracker()
         return func(*args, **kwargs)
     return wrapper
 
@@ -71,7 +71,7 @@ def get_project_or_tag_completion(ctx, args, incomplete):
         """
         Prepend '+' to each tag suggestion.
 
-        For the `watson` targeted with the function
+        For the `tt` targeted with the function
         get_project_or_tag_completion, a leading plus in front of a tag is
         expected. The get_tags() suggestion generation does not include those
         as it targets other subcommands.
@@ -97,8 +97,8 @@ def get_project_or_tag_completion(ctx, args, incomplete):
 @patch_click_ctx_object
 def get_projects(ctx, args, incomplete):
     """Function to return all projects matching the prefix."""
-    watson = ctx.obj
-    for cur_project in watson.projects():
+    timetracker = ctx.obj
+    for cur_project in timetracker.projects():
         if cur_project.startswith(incomplete):
             yield cur_project
 
@@ -106,8 +106,8 @@ def get_projects(ctx, args, incomplete):
 @patch_click_ctx_object
 def get_tags(ctx, args, incomplete):
     """Function to return all tags matching the prefix."""
-    watson = ctx.obj
-    for cur_tag in watson.tags():
+    timetracker = ctx.obj
+    for cur_tag in timetracker.tags():
         if cur_tag.startswith(incomplete):
             yield cur_tag
 
@@ -120,8 +120,8 @@ def get_frames(ctx, args, incomplete):
     This function returns all frame IDs that match the given prefix in a
     generator. If no ID matches the prefix, it returns the empty generator.
     """
-    watson = ctx.obj
-    for cur_frame in watson.frames:
+    timetracker = ctx.obj
+    for cur_frame in timetracker.frames:
         yield_candidate = cur_frame.id
         if yield_candidate.startswith(incomplete):
             yield yield_candidate

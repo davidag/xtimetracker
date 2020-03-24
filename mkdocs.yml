@@ -1,13 +1,11 @@
-site_name: Watson
+site_name: tt
 theme: flatly
-repo_url: https://github.com/TailorDev/Watson
-repo_name: GitHub
+repo_url: https://gitlab.com/davidalfonso/tt
+repo_name: GitLab
 site_description: A wonderful CLI to track your time!
-site_author: TailorDev
+site_author: David Alfonso
 copyright: >
-  Watson, by <a
-  href="http://tailordev.fr?pk_campaign=watson&amp;pk_kwd=docs">TailorDev</a>
-  &amp; al. is released under the MIT License.
+  tt, by David Alfonso, is released under the MIT License.
 nav:
 - Home: 'index.md'
 - User Guide:
@@ -24,7 +22,7 @@ nav:
     - License: 'about/license.md'
     - Release notes: 'about/release-notes.md'
 extra_css:
-    - css/watson.css
+    - css/tt.css
 markdown_extensions:
     - attr_list
     - smarty

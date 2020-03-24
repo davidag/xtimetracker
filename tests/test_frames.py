@@ -1,6 +1,6 @@
 from arrow import Arrow
 
-from watson.frames import Span, Frames, Frame
+from tt.frames import Span, Frames, Frame
 
 
 def test_span_union():

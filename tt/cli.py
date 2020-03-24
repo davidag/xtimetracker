@@ -8,7 +8,6 @@ import arrow
 import click
 from dateutil import tz
 
-import watson as _watson
 from .autocompletion import (
     get_frames,
     get_project_or_tag_completion,
@@ -17,15 +16,17 @@ from .autocompletion import (
     get_rename_types,
     get_tags,
 )
+from .file_utils import safe_save
 from .frames import Frame
-from .utils import (
+from .timetracker import TimeTrackerError
+from .cli_utils import (
     adjusted_span,
     apply_weekday_offset,
     build_csv,
     build_json,
     confirm_project,
     confirm_tags,
-    create_watson,
+    create_timetracker,
     flatten_report_for_csv,
     format_timedelta,
     frames_to_csv,
@@ -34,11 +35,11 @@ from .utils import (
     get_last_frame_from_project,
     get_start_time_for_period,
     options,
-    safe_save,
-    sorted_groupby,
     style,
     parse_tags,
 )
+from .utils import sorted_groupby
+from .version import version as __version__  # noqa
 
 
 class MutuallyExclusiveOption(click.Option):
@@ -114,27 +115,27 @@ class DateTimeParamType(click.ParamType):
 DateTime = DateTimeParamType()
 
 
-def catch_watson_error(func):
+def catch_timetracker_error(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except _watson.WatsonError as e:
+        except TimeTrackerError as e:
             raise click.ClickException(style('error', str(e)))
     return wrapper
 
 
 @click.group()
-@click.version_option(version=_watson.__version__, prog_name='Watson')
+@click.version_option(version=__version__, prog_name='tt')
 @click.pass_context
 def cli(ctx):
     """
-    Watson is a tool aimed for monitoring your time.
+    tt is a tool aimed for monitoring your time.
     """
 
     # This is the main command group, needed by click in order
     # to handle the subcommands
-    ctx.obj = create_watson()
+    ctx.obj = create_timetracker()
 
 
 @cli.command()
@@ -173,8 +174,8 @@ def help(ctx, command):
                 autocompletion=get_project_or_tag_completion)
 @click.pass_obj
 @click.pass_context
-@catch_watson_error
-def start(ctx, watson, gap, stop_, restart, confirm_new_project,
+@catch_timetracker_error
+def start(ctx, timetracker, gap, stop_, restart, confirm_new_project,
           confirm_new_tag, args):
     """
     Start monitoring time for the given project.
@@ -187,11 +188,11 @@ def start(ctx, watson, gap, stop_, restart, confirm_new_project,
     """
     stop_on_start = stop_ or (
         stop_ is None and
-        watson.config.getboolean('options', 'stop_on_start')
+        timetracker.config.getboolean('options', 'stop_on_start')
     )
     restart_on_start = (
         restart or
-        watson.config.getboolean('options', 'restart_on_start')
+        timetracker.config.getboolean('options', 'restart_on_start')
     )
     project = ' '.join(
         itertools.takewhile(lambda s: not s.startswith('+'), args)
@@ -201,46 +202,47 @@ def start(ctx, watson, gap, stop_, restart, confirm_new_project,
     if not project and not restart_on_start:
         raise click.ClickException("No project given.")
     elif not project and restart_on_start:
-        if watson.is_started:
-            project = watson.current['project']
-            tags.extend(watson.current['tags'])
+        if timetracker.is_started:
+            project = timetracker.current['project']
+            tags.extend(timetracker.current['tags'])
         else:
-            frame = get_frame_from_argument(watson, "-1")
+            frame = get_frame_from_argument(timetracker, "-1")
             project = frame.project
             tags.extend(frame.tags)
     elif project and restart_on_start:
-        if watson.is_started and project == watson.current['project']:
-            tags.extend(watson.current['tags'])
+        if (timetracker.is_started
+                and project == timetracker.current['project']):
+            tags.extend(timetracker.current['tags'])
         else:
-            frame = get_last_frame_from_project(watson, project)
+            frame = get_last_frame_from_project(timetracker, project)
             if frame:
                 tags.extend(frame.tags)
 
-    if (watson.config.getboolean('options', 'confirm_new_project') or
+    if (timetracker.config.getboolean('options', 'confirm_new_project') or
             confirm_new_project):
-        confirm_project(project, watson.projects())
+        confirm_project(project, timetracker.projects())
 
-    if (watson.config.getboolean('options', 'confirm_new_tag') or
+    if (timetracker.config.getboolean('options', 'confirm_new_tag') or
             confirm_new_tag):
-        confirm_tags(tags, watson.tags)
+        confirm_tags(tags, timetracker.tags)
 
-    if watson.is_started:
+    if timetracker.is_started:
         if stop_on_start:
             ctx.invoke(stop)
         else:
             raise click.ClickException(
                 style('error', "Project {} is already started.".format(
-                    watson.current['project'])
+                    timetracker.current['project'])
                 )
             )
 
-    current = watson.start(project, tags, gap=gap)
+    current = timetracker.start(project, tags, gap=gap)
     click.echo("Starting project {}{} at {}".format(
         style('project', project),
         (" " if current['tags'] else "") + style('tags', current['tags']),
         style('time', "{:HH:mm}".format(current['start']))
     ))
-    watson.save()
+    timetracker.save()
 
 
 @cli.command(context_settings={'ignore_unknown_options': True})
@@ -248,12 +250,12 @@ def start(ctx, watson, gap, stop_, restart, confirm_new_project,
               help=('Stop frame at this time. Must be in '
                     '(YYYY-MM-DDT)?HH:MM(:SS)? format.'))
 @click.pass_obj
-@catch_watson_error
-def stop(watson, at_):
+@catch_timetracker_error
+def stop(timetracker, at_):
     """
     Stop monitoring time for the current project.
     """
-    frame = watson.stop(stop_at=at_)
+    frame = timetracker.stop(stop_at=at_)
     output_str = "Stopping project {}{}, started {} and stopped {}. (id: {})"
     click.echo(output_str.format(
         style('project', frame.project),
@@ -262,22 +264,22 @@ def stop(watson, at_):
         style('time', frame.stop.humanize()),
         style('short_id', frame.id),
     ))
-    watson.save()
+    timetracker.save()
 
 
 @cli.command()
 @click.pass_obj
-@catch_watson_error
-def cancel(watson):
+@catch_timetracker_error
+def cancel(timetracker):
     """
     Cancel the project being currently recorded.
     """
-    old = watson.cancel()
+    old = timetracker.cancel()
     click.echo("Canceling the timer for project {}{}".format(
         style('project', old['project']),
         (" " if old['tags'] else "") + style('tags', old['tags'])
     ))
-    watson.save()
+    timetracker.save()
 
 
 @cli.command()
@@ -288,19 +290,19 @@ def cancel(watson):
 @click.option('-e', '--elapsed', is_flag=True,
               help="only show time elapsed")
 @click.pass_obj
-@catch_watson_error
-def status(watson, project, tags, elapsed):
+@catch_timetracker_error
+def status(timetracker, project, tags, elapsed):
     """
     Display the currently recorded project.
 
     The displayed date and time format can be configured with options
     `options.date_format` and `options.time_format`.
     """
-    if not watson.is_started:
+    if not timetracker.is_started:
         click.echo("No project started.")
         return
 
-    current = watson.current
+    current = timetracker.current
 
     if project:
         click.echo("{}".format(
@@ -320,8 +322,8 @@ def status(watson, project, tags, elapsed):
         ))
         return
 
-    datefmt = watson.config.get('options', 'date_format', '%Y.%m.%d')
-    timefmt = watson.config.get('options', 'time_format', '%H:%M:%S%z')
+    datefmt = timetracker.config.get('options', 'date_format', '%Y.%m.%d')
+    timefmt = timetracker.config.get('options', 'time_format', '%H:%M:%S%z')
     click.echo("Project {}{} started {} ({} {})".format(
         style('project', current['project']),
         (" " if current['tags'] else "") + style('tags', current['tags']),
@@ -396,8 +398,8 @@ _SHORTCUT_OPTIONS_VALUES = {
 @click.option('-g/-G', '--pager/--no-pager', 'pager', default=None,
               help="(Don't) view output through a pager.")
 @click.pass_obj
-@catch_watson_error
-def report(watson, current, from_, to, projects, exclude_projects, tags,
+@catch_timetracker_error
+def report(timetracker, current, from_, to, projects, exclude_projects, tags,
            exclude_tags, year, month, week, day, full, output_format,
            pager, aggregated=False):
     """
@@ -413,10 +415,10 @@ def report(watson, current, from_, to, projects, exclude_projects, tags,
     else:
         tab = ''
 
-    report = watson.report(from_, to, current, projects, tags,
-                           exclude_projects, exclude_tags,
-                           year=year, month=month, week=week, day=day,
-                           full=full)
+    report = timetracker.report(from_, to, current, projects, tags,
+                                exclude_projects, exclude_tags,
+                                year=year, month=month, week=week, day=day,
+                                full=full)
 
     if 'json' in output_format and not aggregated:
         click.echo(build_json(report))
@@ -430,7 +432,7 @@ def report(watson, current, from_, to, projects, exclude_projects, tags,
     lines = []
     # use the pager, or print directly to the terminal
     if pager or (pager is None and
-                 watson.config.getboolean('options', 'pager', True)):
+                 timetracker.config.getboolean('options', 'pager', True)):
 
         def _print(line):
             lines.append(line)
@@ -556,15 +558,15 @@ def report(watson, current, from_, to, projects, exclude_projects, tags,
               help="(Don't) view output through a pager.")
 @click.pass_obj
 @click.pass_context
-@catch_watson_error
-def aggregate(ctx, watson, current, from_, to, projects, exclude_projects,
+@catch_timetracker_error
+def aggregate(ctx, timetracker, current, from_, to, projects, exclude_projects,
               tags, exclude_tags, output_format, pager):
     """
     Display a report of the time spent on each project aggregated by day.
 
     By default, the time spent the last 7 days is printed.
     """
-    from_, to = adjusted_span(watson, from_, to, current)
+    from_, to = adjusted_span(timetracker, from_, to, current)
     delta = (to.datetime - from_.datetime).days
     lines = []
     for i in range(delta + 1):
@@ -595,7 +597,7 @@ def aggregate(ctx, watson, current, from_, to, projects, exclude_projects,
     elif 'csv' in output_format:
         click.echo(build_csv(lines))
     elif pager or (pager is None and
-                   watson.config.getboolean('options', 'pager', True)):
+                   timetracker.config.getboolean('options', 'pager', True)):
         click.echo_via_pager('\n\n'.join(lines))
     else:
         click.echo('\n\n'.join(lines))
@@ -657,8 +659,8 @@ def aggregate(ctx, watson, current, from_, to, projects, exclude_projects,
 @click.option('-g/-G', '--pager/--no-pager', 'pager', default=None,
               help="(Don't) view output through a pager.")
 @click.pass_obj
-@catch_watson_error
-def log(watson, current, from_, to, projects, exclude_projects, tags,
+@catch_timetracker_error
+def log(timetracker, current, from_, to, projects, exclude_projects, tags,
         exclude_tags, year, month, week, day, full, output_format,
         pager):
     """
@@ -666,7 +668,7 @@ def log(watson, current, from_, to, projects, exclude_projects, tags,
 
     By default, the sessions from the last 7 days are printed.
     """  # noqa
-    filtered_frames = watson.log(
+    filtered_frames = timetracker.log(
         from_,
         to,
         current,
@@ -697,7 +699,7 @@ def log(watson, current, from_, to, projects, exclude_projects, tags,
     lines = []
     # use the pager, or print directly to the terminal
     if pager or (pager is None and
-                 watson.config.getboolean('options', 'pager', True)):
+                 timetracker.config.getboolean('options', 'pager', True)):
 
         def _print(line):
             lines.append(line)
@@ -753,13 +755,13 @@ def log(watson, current, from_, to, projects, exclude_projects, tags,
 @click.argument('tags', nargs=-1,
                 autocompletion=get_tags)
 @click.pass_obj
-@catch_watson_error
-def projects(watson, tags):
+@catch_timetracker_error
+def projects(timetracker, tags):
     """
     Display the list of all the existing projects, or only those matching all
     the provided tag(s).
     """
-    for project in watson.projects(tags):
+    for project in timetracker.projects(tags):
         click.echo(style('project', project))
 
 
@@ -767,24 +769,24 @@ def projects(watson, tags):
 @click.argument('projects', nargs=-1,
                 autocompletion=get_projects)
 @click.pass_obj
-@catch_watson_error
-def tags(watson, projects):
+@catch_timetracker_error
+def tags(timetracker, projects):
     """
     Display the list of all the tags, or only those matching all the provided
     projects.
     """
-    for tag in watson.tags(projects):
+    for tag in timetracker.tags(projects):
         click.echo(style('tag', tag))
 
 
 @cli.command()
 @click.pass_obj
-@catch_watson_error
-def frames(watson):
+@catch_timetracker_error
+def frames(timetracker):
     """
     Display the list of all frame IDs.
     """
-    for frame in watson.frames:
+    for frame in timetracker.frames:
         click.echo(style('short_id', frame.id))
 
 
@@ -800,8 +802,8 @@ def frames(watson):
 @click.option('-b', '--confirm-new-tag', is_flag=True, default=False,
               help="Confirm creation of new tag.")
 @click.pass_obj
-@catch_watson_error
-def add(watson, args, from_, to, confirm_new_project, confirm_new_tag):
+@catch_timetracker_error
+def add(timetracker, args, from_, to, confirm_new_project, confirm_new_tag):
     """
     Add time to a project with tag(s) that was not tracked live.
     """
@@ -813,20 +815,22 @@ def add(watson, args, from_, to, confirm_new_project, confirm_new_tag):
         raise click.ClickException("No project given.")
 
     # Confirm creation of new project if that option is set
-    if (watson.config.getboolean('options', 'confirm_new_project') or
+    if (timetracker.config.getboolean('options', 'confirm_new_project') or
             confirm_new_project):
-        confirm_project(project, watson.projects())
+        confirm_project(project, timetracker.projects())
 
     # Parse all the tags
     tags = parse_tags(args)
 
     # Confirm creation of new tag(s) if that option is set
-    if (watson.config.getboolean('options', 'confirm_new_tag') or
+    if (timetracker.config.getboolean('options', 'confirm_new_tag') or
             confirm_new_tag):
-        confirm_tags(tags, watson.tags)
+        confirm_tags(tags, timetracker.tags)
 
-    # add a new frame, call watson save to update state files
-    frame = watson.add(project=project, tags=tags, from_date=from_, to_date=to)
+    # add a new frame, call timetracker save to update state files
+    frame = timetracker.add(
+        project=project, tags=tags, from_date=from_, to_date=to)
+
     click.echo(
         "Adding project {}{}, started {} and stopped {}. (id: {})".format(
             style('project', frame.project),
@@ -836,7 +840,7 @@ def add(watson, args, from_, to, confirm_new_project, confirm_new_tag):
             style('short_id', frame.id)
         )
     )
-    watson.save()
+    timetracker.save()
 
 
 @cli.command(context_settings={'ignore_unknown_options': True})
@@ -846,14 +850,14 @@ def add(watson, args, from_, to, confirm_new_project, confirm_new_tag):
               help="Confirm creation of new tag.")
 @click.argument('id', required=False, autocompletion=get_frames)
 @click.pass_obj
-@catch_watson_error
-def edit(watson, confirm_new_project, confirm_new_tag, id):
+@catch_timetracker_error
+def edit(timetracker, confirm_new_project, confirm_new_tag, id):
     """
     Edit a frame.
 
     You can specify the frame to edit by its position or by its frame id.
     For example, to edit the second-to-last frame, pass `-2` as the frame
-    index. You can get the id of a frame with the `watson log` command.
+    index. You can get the id of a frame with the `tt log` command.
 
     If no id or index is given, the frame defaults to the current frame (or the
     last recorded frame, if no project is currently running).
@@ -868,18 +872,19 @@ def edit(watson, confirm_new_project, confirm_new_tag, id):
     local_tz = tz.tzlocal()
 
     if id:
-        frame = get_frame_from_argument(watson, id)
+        frame = get_frame_from_argument(timetracker, id)
         id = frame.id
-    elif watson.is_started:
-        frame = Frame(watson.current['start'], None, watson.current['project'],
-                      None, watson.current['tags'])
-    elif watson.frames:
-        frame = watson.frames[-1]
+    elif timetracker.is_started:
+        frame = Frame(timetracker.current['start'], None,
+                      timetracker.current['project'], None,
+                      timetracker.current['tags'])
+    elif timetracker.frames:
+        frame = timetracker.frames[-1]
         id = frame.id
     else:
         raise click.ClickException(
             style('error', "No frames recorded yet. It's time to create your "
-                           "first one!"))
+                  "first one!"))
 
     data = {
         'start': frame.start.format(datetime_format),
@@ -908,21 +913,21 @@ def edit(watson, confirm_new_project, confirm_new_tag, id):
             data = json.loads(output)
             project = data['project']
             # Confirm creation of new project if that option is set
-            if (watson.config.getboolean('options', 'confirm_new_project') or
-                    confirm_new_project):
-                confirm_project(project, watson.projects())
+            if (timetracker.config.getboolean('options', 'confirm_new_project')
+                    or confirm_new_project):
+                confirm_project(project, timetracker.projects())
             tags = data['tags']
             # Confirm creation of new tag(s) if that option is set
-            if (watson.config.getboolean('options', 'confirm_new_tag') or
+            if (timetracker.config.getboolean('options', 'confirm_new_tag') or
                     confirm_new_tag):
-                confirm_tags(tags, watson.tags)
+                confirm_tags(tags, timetracker.tags)
             start = arrow.get(data['start'], datetime_format).replace(
                 tzinfo=local_tz).to('utc')
             stop = arrow.get(data['stop'], datetime_format).replace(
                 tzinfo=local_tz).to('utc') if id else None
             # if start time of the project is not before end time
             #  raise ValueException
-            if not watson.is_started and start > stop:
+            if not timetracker.is_started and start > stop:
                 raise ValueError(
                     "Task cannot end before it starts.")
             # break out of while loop and continue execution of
@@ -945,11 +950,11 @@ def edit(watson, confirm_new_project, confirm_new_tag, id):
 
     # we reach this when we break out of the while loop above
     if id:
-        watson.frames[id] = (project, start, stop, tags)
+        timetracker.frames[id] = (project, start, stop, tags)
     else:
-        watson.current = dict(start=start, project=project, tags=tags)
+        timetracker.current = dict(start=start, project=project, tags=tags)
 
-    watson.save()
+    timetracker.save()
     click.echo(
         "Edited frame for project {project}{tags}, from {start} to {stop} "
         "({delta})".format(
@@ -973,13 +978,13 @@ def edit(watson, confirm_new_project, confirm_new_tag, id):
 @click.option('-f', '--force', is_flag=True,
               help="Don't ask for confirmation.")
 @click.pass_obj
-@catch_watson_error
-def remove(watson, id, force):
+@catch_timetracker_error
+def remove(timetracker, id, force):
     """
     Remove a frame. You can specify the frame either by id or by position
     (ex: `-1` for the last frame).
     """
-    frame = get_frame_from_argument(watson, id)
+    frame = get_frame_from_argument(timetracker, id)
     id = frame.id
 
     if not force:
@@ -994,9 +999,9 @@ def remove(watson, id, force):
             abort=True
         )
 
-    del watson.frames[id]
+    del timetracker.frames[id]
 
-    watson.save()
+    timetracker.save()
     click.echo("Frame removed.")
 
 
@@ -1006,7 +1011,7 @@ def remove(watson, id, force):
 @click.option('-e', '--edit', is_flag=True,
               help="Edit the configuration file with an editor.")
 @click.pass_context
-@catch_watson_error
+@catch_timetracker_error
 def config(context, key, value, edit):
     """
     Get and set configuration options.
@@ -1019,16 +1024,16 @@ def config(context, key, value, edit):
     Example:
 
     \b
-    $ watson config options.include_current true
-    $ watson config options.include_current
+    $ tt config options.include_current true
+    $ tt config options.include_current
     true
     """
-    watson = context.obj
-    wconfig = watson.config
+    timetracker = context.obj
+    wconfig = timetracker.config
 
     if edit:
         try:
-            with open(watson.config_file) as fp:
+            with open(timetracker.config_file) as fp:
                 rawconfig = fp.read()
         except (IOError, OSError):
             rawconfig = ''
@@ -1036,14 +1041,14 @@ def config(context, key, value, edit):
         newconfig = click.edit(text=rawconfig, extension='.ini')
 
         if newconfig:
-            safe_save(watson.config_file, newconfig)
+            safe_save(timetracker.config_file, newconfig)
 
         try:
-            watson.config = None
-            watson.config  # triggers reloading config from file
-        except _watson.ConfigurationError as exc:
-            watson.config = wconfig
-            watson.save()
+            timetracker.config = None
+            timetracker.config  # triggers reloading config from file
+        except timetracker.ConfigurationError as exc:
+            timetracker.config = wconfig
+            timetracker.save()
             raise click.ClickException(style('error', str(exc)))
         return
 
@@ -1073,8 +1078,8 @@ def config(context, key, value, edit):
             wconfig.add_section(section)
 
         wconfig.set(section, option, value)
-        watson.config = wconfig
-        watson.save()
+        timetracker.config = wconfig
+        timetracker.save()
 
 
 @cli.command()
@@ -1083,8 +1088,8 @@ def config(context, key, value, edit):
               help="If specified, then the merge will automatically "
               "be performed.")
 @click.pass_obj
-@catch_watson_error
-def merge(watson, frames_with_conflict, force):
+@catch_timetracker_error
+def merge(timetracker, frames_with_conflict, force):
     """
     Perform a merge of the existing frames with a conflicting frames file.
 
@@ -1103,7 +1108,7 @@ def merge(watson, frames_with_conflict, force):
     Example:
 
     \b
-    $ watson merge frames-with-conflicts
+    $ tt merge frames-with-conflicts
     120 frames will be left unchanged
     12  frames will be merged
     3   frame conflicts need to be resolved
@@ -1111,8 +1116,8 @@ def merge(watson, frames_with_conflict, force):
     To perform a merge operation, the user will be prompted to
     select the frame they would like to keep.
     """
-    original_frames = watson.frames
-    conflicting, merging = watson.merge_report(frames_with_conflict)
+    original_frames = timetracker.frames
+    conflicting, merging = timetracker.merge_report(frames_with_conflict)
 
     # find the length of the largest returned list, then get the number of
     # digits of this length
@@ -1196,9 +1201,9 @@ def merge(watson, frames_with_conflict, force):
         original_frames.add(project, start, stop, tags=tags, id=id,
                             updated_at=updated_at)
 
-    watson.frames = original_frames
-    watson.frames.changed = True
-    watson.save()
+    timetracker.frames = original_frames
+    timetracker.frames.changed = True
+    timetracker.save()
 
 
 @cli.command()
@@ -1207,19 +1212,19 @@ def merge(watson, frames_with_conflict, force):
 @click.argument('old_name', required=True, autocompletion=get_rename_name)
 @click.argument('new_name', required=True, autocompletion=get_rename_name)
 @click.pass_obj
-@catch_watson_error
-def rename(watson, rename_type, old_name, new_name):
+@catch_timetracker_error
+def rename(timetracker, rename_type, old_name, new_name):
     """
     Rename a project or tag.
     """
     if rename_type == 'tag':
-        watson.rename_tag(old_name, new_name)
+        timetracker.rename_tag(old_name, new_name)
         click.echo('Renamed tag "{}" to "{}"'.format(
                         style('tag', old_name),
                         style('tag', new_name)
                    ))
     elif rename_type == 'project':
-        watson.rename_project(old_name, new_name)
+        timetracker.rename_project(old_name, new_name)
         click.echo('Renamed project "{}" to "{}"'.format(
                         style('project', old_name),
                         style('project', new_name)

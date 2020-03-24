@@ -5,8 +5,8 @@ from argparse import Namespace
 
 import pytest
 
-from watson import Watson
-from watson.autocompletion import (
+from tt import TimeTracker
+from tt.autocompletion import (
     get_frames,
     get_project_or_tag_completion,
     get_projects,
@@ -44,9 +44,9 @@ ClickContext = Namespace
     ],
 )
 def test_if_returned_values_are_distinct(
-    watson_df, func_to_test, rename_type, args
+    timetracker_df, func_to_test, rename_type, args
 ):
-    ctx = ClickContext(obj=watson_df, params={"rename_type": rename_type})
+    ctx = ClickContext(obj=timetracker_df, params={"rename_type": rename_type})
     prefix = ""
     ret_list = list(func_to_test(ctx, args, prefix))
     assert sorted(ret_list) == sorted(set(ret_list))
@@ -67,10 +67,10 @@ def test_if_returned_values_are_distinct(
     ],
 )
 def test_if_empty_prefix_returns_everything(
-    watson_df, func_to_test, n_expected_returns, rename_type, args
+    timetracker_df, func_to_test, n_expected_returns, rename_type, args
 ):
     prefix = ""
-    ctx = ClickContext(obj=watson_df, params={"rename_type": rename_type})
+    ctx = ClickContext(obj=timetracker_df, params={"rename_type": rename_type})
     completed_vals = set(func_to_test(ctx, args, prefix))
     assert len(completed_vals) == n_expected_returns
 
@@ -91,9 +91,9 @@ def test_if_empty_prefix_returns_everything(
     ],
 )
 def test_completion_of_nonexisting_prefix(
-    watson_df, func_to_test, rename_type, args
+    timetracker_df, func_to_test, rename_type, args
 ):
-    ctx = ClickContext(obj=watson_df, params={"rename_type": rename_type})
+    ctx = ClickContext(obj=timetracker_df, params={"rename_type": rename_type})
     prefix = "NOT-EXISTING-PREFIX"
     ret_list = list(func_to_test(ctx, args, prefix))
     assert not ret_list
@@ -133,9 +133,9 @@ def test_completion_of_nonexisting_prefix(
     ],
 )
 def test_completion_of_existing_prefix(
-    watson_df, func_to_test, prefix, n_expected_vals, rename_type, args
+    timetracker_df, func_to_test, prefix, n_expected_vals, rename_type, args
 ):
-    ctx = ClickContext(obj=watson_df, params={"rename_type": rename_type})
+    ctx = ClickContext(obj=timetracker_df, params={"rename_type": rename_type})
     ret_set = set(func_to_test(ctx, args, prefix))
     assert len(ret_set) == n_expected_vals
     assert all(cur_elem.startswith(prefix) for cur_elem in ret_set)
@@ -157,15 +157,15 @@ def test_for_known_completion_values(func_to_test, prefix, expected_vals):
 
 @pytest.mark.parametrize("func", [
     get_projects, get_tags, get_frames, get_project_or_tag_completion])
-def test_watson_object_gets_created_if_empty_with_positional_args(func):
+def test_timetracker_object_gets_created_if_empty_with_positional_args(func):
     ctx = ClickContext(obj=None)
     func(ctx, [], "")
-    assert isinstance(ctx.obj, Watson)
+    assert isinstance(ctx.obj, TimeTracker)
 
 
 @pytest.mark.parametrize("func", [
     get_projects, get_tags, get_frames, get_project_or_tag_completion])
-def test_watson_object_gets_created_if_empty_with_keyword_args(func):
+def test_timetracker_object_gets_created_if_empty_with_keyword_args(func):
     ctx = ClickContext(obj=None)
     func(ctx=ctx, args=[], incomplete="")
-    assert isinstance(ctx.obj, Watson)
+    assert isinstance(ctx.obj, TimeTracker)

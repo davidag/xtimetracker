@@ -8,20 +8,20 @@ from collections import defaultdict
 from functools import reduce
 
 from .config import ConfigParser
+from .file_utils import safe_save
+from .utils import deduplicate, sorted_groupby
 from .frames import Frames, Span
-from .utils import deduplicate, make_json_writer, safe_save, sorted_groupby
-from .version import version as __version__  # noqa
 
 
-class WatsonError(RuntimeError):
+class TimeTrackerError(RuntimeError):
     pass
 
 
-class ConfigurationError(configparser.Error, WatsonError):
+class ConfigurationError(configparser.Error, TimeTrackerError):
     pass
 
 
-class Watson:
+class TimeTracker:
     def __init__(self, **kwargs):
         """
         :param frames: If given, should be a list representing the
@@ -75,11 +75,11 @@ class Watson:
             if os.path.getsize(filename) == 0:
                 return type()
             else:
-                raise WatsonError(
+                raise TimeTrackerError(
                     "Invalid JSON file {}: {}".format(filename, e)
                 )
         except Exception as e:
-            raise WatsonError(
+            raise TimeTrackerError(
                 "Unexpected error while loading JSON file {}: {}".format(
                     filename, e
                 )
@@ -96,10 +96,21 @@ class Watson:
 
         return date.timestamp
 
+    def _make_json_writer(func, *args, **kwargs):
+        """
+        Return a function that receives a file-like object and writes the
+        return value of func(*args, **kwargs) as JSON to it.
+        """
+        def writer(f):
+            dump = json.dumps(
+                func(*args, **kwargs), indent=1, ensure_ascii=False)
+            f.write(dump)
+        return writer
+
     @property
     def config(self):
         """
-        Return Watson's config as a ConfigParser object.
+        Return TimeTracker's config as a ConfigParser object.
         """
         if not self._config:
             try:
@@ -138,18 +149,19 @@ class Watson:
                 else:
                     current = {}
 
-                safe_save(self.state_file, make_json_writer(lambda: current))
+                safe_save(self.state_file,
+                          TimeTracker._make_json_writer(lambda: current))
                 self._old_state = current
 
             if self._frames is not None and self._frames.changed:
                 safe_save(self.frames_file,
-                          make_json_writer(self.frames.dump))
+                          TimeTracker._make_json_writer(self.frames.dump))
 
             if self._config_changed:
                 safe_save(self.config_file, self.config.write)
 
         except OSError as e:
-            raise WatsonError(
+            raise TimeTrackerError(
                 "Impossible to write {}: {}".format(e.filename, e)
             )
 
@@ -210,9 +222,9 @@ class Watson:
 
     def add(self, project, from_date, to_date, tags):
         if not project:
-            raise WatsonError("No project given.")
+            raise TimeTrackerError("No project given.")
         if from_date > to_date:
-            raise WatsonError("Task cannot end before it starts.")
+            raise TimeTrackerError("Task cannot end before it starts.")
 
         default_tags = self.config.getlist('default_tags', project)
         tags = (tags or []) + default_tags
@@ -224,7 +236,10 @@ class Watson:
         assert not self.is_started
         default_tags = self.config.getlist('default_tags', project)
         tags = (tags or []) + default_tags
-        new_frame = {'project': project, 'tags': deduplicate(tags)}
+        new_frame = {
+            'project': project,
+            'tags': deduplicate(tags)
+        }
         if not gap:
             stop_of_prev_frame = self.frames[-1].stop
             new_frame['start'] = stop_of_prev_frame
@@ -233,7 +248,7 @@ class Watson:
 
     def stop(self, stop_at=None):
         if not self.is_started:
-            raise WatsonError("No project started.")
+            raise TimeTrackerError("No project started.")
 
         old = self.current
 
@@ -245,9 +260,9 @@ class Watson:
             # outdated if defined using a default argument.
             stop_at = arrow.now()
         if old['start'] > stop_at:
-            raise WatsonError('Task cannot end before it starts.')
+            raise TimeTrackerError('Task cannot end before it starts.')
         if stop_at > arrow.now():
-            raise WatsonError('Task cannot end in the future.')
+            raise TimeTrackerError('Task cannot end in the future.')
 
         frame = self.frames.add(
             old['project'], old['start'], stop_at, tags=old['tags']
@@ -258,7 +273,7 @@ class Watson:
 
     def cancel(self):
         if not self.is_started:
-            raise WatsonError("No project started.")
+            raise TimeTrackerError("No project started.")
 
         old_current = self.current
         self.current = None
@@ -330,14 +345,15 @@ class Watson:
             from_ = start_time
 
         if not self._validate_inclusion_options(projects, ignore_projects):
-            raise WatsonError(
+            raise TimeTrackerError(
                 "given projects can't be ignored at the same time")
 
         if not self._validate_inclusion_options(tags, ignore_tags):
-            raise WatsonError("given tags can't be ignored at the same time")
+            raise TimeTrackerError(
+                "given tags can't be ignored at the same time")
 
         if from_ > to:
-            raise WatsonError("'from' must be anterior to 'to'")
+            raise TimeTrackerError("'from' must be anterior to 'to'")
 
         if current is None:
             current = self.config.getboolean('options', 'include_current')
@@ -382,7 +398,7 @@ class Watson:
             operator.attrgetter('project')
         )
 
-        # After sorted_groupby, the filtered_frames generator has been
+        # After sorting by project, the filtered_frames generator has been
         # consumed and this removal does not affect frames_by_project.
         # That's why we don't delete the current frame inside log().
         if self.is_started and current:
@@ -444,7 +460,7 @@ class Watson:
     def rename_project(self, old_project, new_project):
         """Rename a project in all affected frames."""
         if old_project not in self.projects():
-            raise WatsonError('Project "%s" does not exist' % old_project)
+            raise TimeTrackerError('Project "%s" does not exist' % old_project)
 
         updated_at = arrow.utcnow()
         # rename project
@@ -461,7 +477,7 @@ class Watson:
     def rename_tag(self, old_tag, new_tag):
         """Rename a tag in all affected frames."""
         if old_tag not in self.tags():
-            raise WatsonError('Tag "%s" does not exist' % old_tag)
+            raise TimeTrackerError('Tag "%s" does not exist' % old_tag)
 
         updated_at = arrow.utcnow()
         # rename tag

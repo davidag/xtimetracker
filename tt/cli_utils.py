@@ -5,8 +5,6 @@ import itertools
 import json
 import operator
 import os
-import shutil
-import tempfile
 from io import StringIO
 from typing import Iterable
 
@@ -14,12 +12,12 @@ import arrow
 import click
 from click.exceptions import UsageError
 
-import watson as _watson
+from .timetracker import TimeTracker
 
 
-def create_watson():
-    config_dir = os.environ.get('WATSON_DIR', click.get_app_dir('watson'))
-    return _watson.Watson(config_dir=config_dir)
+def create_timetracker():
+    config_dir = os.environ.get('TT_DIR', click.get_app_dir('tt'))
+    return TimeTracker(config_dir=config_dir)
 
 
 def confirm_project(project: str, existing_projects: Iterable):
@@ -103,14 +101,6 @@ def format_timedelta(delta):
     return ('-' if neg else '') + ' '.join(stems)
 
 
-def sorted_groupby(iterator, key, reverse=False):
-    """
-    Similar to `itertools.groupby`, but sorts the iterator with the same
-    key first.
-    """
-    return itertools.groupby(sorted(iterator, key=key, reverse=reverse), key)
-
-
 def options(opt_list):
     """
     Wrapper for the `value_proc` field in `click.prompt`, which validates
@@ -125,7 +115,7 @@ def options(opt_list):
     return value_proc
 
 
-def get_frame_from_argument(watson, arg):
+def get_frame_from_argument(timetracker, arg):
     """
     Get a frame from a command line argument which can either be a
     position index (-1) or a frame id.
@@ -136,7 +126,7 @@ def get_frame_from_argument(watson, arg):
     try:
         index = int(arg)
         if index < 0:
-            return watson.frames[index]
+            return timetracker.frames[index]
     except IndexError:
         raise click.ClickException(
             style('error', "No frame found for index {}.".format(arg))
@@ -146,7 +136,7 @@ def get_frame_from_argument(watson, arg):
 
     # if we didn't find a frame by position, we try by id
     try:
-        return watson.frames[arg]
+        return timetracker.frames[arg]
     except KeyError:
         raise click.ClickException("{} {}.".format(
             style('error', "No frame found with id"),
@@ -154,11 +144,11 @@ def get_frame_from_argument(watson, arg):
         )
 
 
-def get_last_frame_from_project(watson, project):
-    if project not in watson.projects():
+def get_last_frame_from_project(timetracker, project):
+    if project not in timetracker.projects():
         return None
     last_frame = None
-    for f in watson.frames.filter(projects=[project]):
+    for f in timetracker.frames.filter(projects=[project]):
         if not last_frame:
             last_frame = f
         elif last_frame.start < f.start:
@@ -208,68 +198,6 @@ def apply_weekday_offset(start_time, week_start):
     now = datetime.datetime.now()
     offset = weekdays[new_start] - 7 * (weekdays[new_start] > now.weekday())
     return start_time.shift(days=offset)
-
-
-def make_json_writer(func, *args, **kwargs):
-    """
-    Return a function that receives a file-like object and writes the return
-    value of func(*args, **kwargs) as JSON to it.
-    """
-    def writer(f):
-        dump = json.dumps(func(*args, **kwargs), indent=1, ensure_ascii=False)
-        f.write(dump)
-    return writer
-
-
-def safe_save(path, content, ext='.bak'):
-    """
-    Save given content to file at given path safely.
-
-    `content` may either be a (unicode) string to write to the file, or a
-    function taking one argument, a file object opened for writing. The
-    function may write (unicode) strings to the file object (but doesn't need
-    to close it).
-
-    The file to write to is created at a temporary location first. If there is
-    an error creating or writing to the temp file or calling `content`, the
-    destination file is left untouched. Otherwise, if all is well, an existing
-    destination file is backed up to `path` + `ext` (defaults to '.bak') and
-    the temporary file moved into its place.
-
-    """
-    tmpfp = tempfile.NamedTemporaryFile(mode='w+', delete=False)
-    try:
-        with tmpfp:
-            if isinstance(content, str):
-                tmpfp.write(content)
-            else:
-                content(tmpfp)
-    except Exception:
-        try:
-            os.unlink(tmpfp.name)
-        except (IOError, OSError):
-            pass
-        raise
-    else:
-        if os.path.exists(path):
-            try:
-                os.unlink(path + ext)
-            except OSError:
-                pass
-            shutil.move(path, path + ext)
-
-        shutil.move(tmpfp.name, path)
-
-
-def deduplicate(sequence):
-    """
-    Return a list with all items of the input sequence but duplicates removed.
-
-    Leaves the input sequence unaltered.
-    """
-    return [element
-            for index, element in enumerate(sequence)
-            if element not in sequence[:index]]
 
 
 def parse_tags(values_list):
@@ -355,7 +283,8 @@ def build_csv(entries):
 
 def flatten_report_for_csv(report):
     """
-    Flattens the data structure returned by `watson.report()` for a csv export.
+    Flattens the data structure returned by `timetracker.report()` for a csv
+    export.
 
     Dates are formatted in a way that Excel (default csv module dialect) can
     handle them (i.e. YYYY-MM-DD HH:mm:ss).
@@ -414,11 +343,11 @@ def json_encoder(obj):
     raise TypeError("Object {} is not JSON serializable".format(obj))
 
 
-def adjusted_span(watson, from_, to, current):
+def adjusted_span(timetracker, from_, to, current):
     """
     Returns the number of days in interval adjusted to existing frame interval
     """
-    span = watson.span(current)
+    span = timetracker.span(current)
     if from_ < span.start:
         from_ = span.start
     if to > span.stop:

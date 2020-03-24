@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Setup file for the Watson distribution."""
+"""Setup file for tt distribution."""
 
 from os.path import join
 
@@ -10,7 +10,7 @@ with open('README.rst') as f:
 
 # read package meta-data from version.py
 pkg = {}
-mod = join('watson', 'version.py')
+mod = join('tt', 'version.py')
 exec(compile(open(mod).read(), mod, 'exec'), {}, pkg)
 
 
@@ -35,13 +35,13 @@ def parse_requirements(requirements, ignore=('setuptools',)):
 
 
 setup(
-    name='td-watson',
+    name='tt',
     version=pkg['version'],
     description='A wonderful CLI to track your time!',
-    url="https://github.com/TailorDev/Watson",
-    packages=['watson'],
-    author='TailorDev',
-    author_email='contact@tailordev.fr',
+    url="https://gitlab.com/davidalfonso/tt",
+    packages=['tt'],
+    author='David Alfonso',
+    author_email='developer@davidalfonso.es',
     license='MIT',
     long_description=readme,
     install_requires=parse_requirements('requirements.txt'),
@@ -49,7 +49,7 @@ setup(
     tests_require=parse_requirements('requirements-dev.txt'),
     entry_points={
         'console_scripts': [
-            'watson = watson.__main__:cli',
+            'tt = tt.__main__:cli',
         ]
     },
     classifiers=[
@@ -71,5 +71,5 @@ setup(
         "Topic :: Office/Business",
         "Topic :: Utilities",
     ],
-    keywords='watson time-tracking time tracking monitoring report',
+    keywords='tt time-tracking time tracking monitoring report',
 )

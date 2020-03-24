@@ -2,11 +2,11 @@
 
 ## The configuration file
 
-Watson configuration and data are stored inside your user's application folder. Depending on your system, the default path is likely:
+Tt configuration and data are stored inside your user's application folder. Depending on your system, the default path is likely:
 
-* **MacOSX**: `~/Library/Application Support/watson/config`
-* **Windows**: `%appdata%\watson\config`, which usually expands to `C:\Users\<user>\AppData\Roaming\watson\config`
-* **Linux**: `~/.config/watson/config`
+* **MacOSX**: `~/Library/Application Support/tt/config`
+* **Windows**: `%appdata%\tt\config`, which usually expands to `C:\Users\<user>\AppData\Roaming\tt\config`
+* **Linux**: `~/.config/tt/config`
 
 The configuration file is a typical [python configuration (INI) file](https://docs.python.org/3.7/library/configparser.html#supported-ini-file-structure), that looks like:
 
@@ -65,36 +65,24 @@ If you want to edit your configuration, the best is to use the [`config`](./comm
 You can edit your configuration on the fly with:
 
 ```bash
-$ watson config SECTION.KEY VALUE
+$ tt config SECTION.KEY VALUE
 ```
 
 Example:
 
 ```bash
-$ watson config backend.token 7e329263e329  # set configuration
-$ watson config backend.token  # display configuration
+$ tt config backend.token 7e329263e329  # set configuration
+$ tt config backend.token  # display configuration
 7e329263e329
 ```
 
 Or open an editor with:
 
 ```bash
-$ watson config -e
+$ tt config -e
 ```
 
 ## Available settings
-
-### Backend
-
-At this time there is no official backend for Watson. We are working on it. But in a near future, you will be able to synchronize Watson with a public (or your private) repository via the [`sync`](./commands.md#sync) command. To configure your repository please set up the `[backend]` section.
-
-#### `backend.url` (default: empty)
-
-This is the API root url of your repository, e.g. `https://my.server.com/api/`
-
-#### `backend.token` (default: empty)
-
-To authenticate watson as an API client, once generated, you will need to set up your API token in your configuration, e.g. `7e329263e329`.
 
 ### Options
 
@@ -128,9 +116,9 @@ in colour, but `log` or `report` do not, try disabling the pager.
 If `true`, starting a new project will stop running projects:
 
 ```
-$ watson start samourai +pizza +cat
+$ tt start samourai +pizza +cat
 Starting project samourai [pizza, cat] at 11:14
-$ watson start jayce +wheeled +warriors
+$ tt start jayce +wheeled +warriors
 Stopping project samourai [pizza, cat], started 2 minutes ago. (id: d08cdd0)
 Starting project jayce [wheeled, warriors] at 11:16
 ```
@@ -138,7 +126,7 @@ Starting project jayce [wheeled, warriors] at 11:16
 Please, note that it also works with serious stuffs like:
 
 ```
-$ watson start voyager2 +reactor +module
+$ tt start voyager2 +reactor +module
 Stopping project jayce [wheeled, warriors], started 2 minutes ago. (id: 967965f)
 Starting project voyager2 [reactor, module] at 11:18
 ```
@@ -170,7 +158,7 @@ tags should be attached. The entries should follow the pattern: `project = tag1 
 You can set default tags for a project from the command line:
 
 ```
-$ watson config default_tags.python101 'teaching python'
+$ tt config default_tags.python101 'teaching python'
 ```
 
 This corresponds to the following configuration file snippets:
@@ -184,17 +172,17 @@ With these default tags set, the tags "teaching" and "python" will
 automatically be attached to the project "python101":
 
 ```
-$ watson start python101
+$ tt start python101
 Starting project python101 [teaching, python] at 19:27
 
-$ watson start python101 +lecture
+$ tt start python101 +lecture
 Starting project python101 [lecture, teaching, python] at 19:28
 ```
 
 Default tags can contain space characters when written in between quotes:
 
 ```
-$ watson config default_tags.voyager2 'nasa "space mission"'
+$ tt config default_tags.voyager2 'nasa "space mission"'
 ```
 
 Or in the configuration file:
@@ -209,7 +197,7 @@ voyager2 = nasa 'space mission'
 A basic configuration file looks like the following:
 
 ```ini
-# Watson configuration
+# tt configuration
 
 [backend]
 url = https://api.crick.fr
@@ -228,19 +216,19 @@ report_current = false
 
 ## Application folder
 
-To override Watson's default application folder (see first section), you can set the `$WATSON_DIR` environment variable to the desired path.
+To override tt's default application folder (see first section), you can set the `$TT_DIR` environment variable to the desired path.
 
 It may be defined globally in your shell profile:
 
 ```bash
 # .bashrc or .profile
-export WATSON_DIR=/path/to/watson/folder
+export TT_DIR=/path/to/tt/folder
 ```
 
-or when calling Watson:
+or when calling tt:
 
 ```bash
-$ WATSON_DIR=/path/to/watson/folder watson status
+$ TT_DIR=/path/to/tt/folder tt status
 ```
 
-This can be useful to preserve your real data when hacking with Watson :)
+This can be useful to preserve your real data when hacking with tt :)
