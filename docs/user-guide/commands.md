@@ -177,44 +177,6 @@ Flag | Help
 `-g, --pager / -G, --no-pager` | (Don't) view output through a pager.
 `--help` | Show this message and exit.
 
-## `merge`
-
-```bash
-Usage:  tt merge [OPTIONS] FRAMES_WITH_CONFLICT
-```
-
-Perform a merge of the existing frames with a conflicting frames file.
-
-When storing the frames on a file hosting service, there is the
-possibility that the frame file goes out-of-sync due to one or
-more of the connected clients going offline. This can cause the
-frames to diverge.
-
-If the `--force` command is specified, the merge operation
-will automatically be performed.
-
-The only argument is a path to the the conflicting `frames` file.
-
-Merge will output statistics about the merge operation.
-
-Example:
-
-
-    $ tt merge frames-with-conflicts
-    120 frames will be left unchanged
-    12  frames will be merged
-    3   frame conflicts need to be resolved
-    
-To perform a merge operation, the user will be prompted to
-select the frame they would like to keep.
-
-### Options
-
-Flag | Help
------|-----
-`-f, --force` | If specified, then the merge will automatically be performed.
-`--help` | Show this message and exit.
-
 ## `projects`
 
 ```bash

@@ -309,27 +309,6 @@ class TimeTracker:
             t for t in tags
             if not projects or all(t in matched_projects[p] for p in projects))
 
-    def merge_report(self, frames_with_conflict):
-        conflict_file_frames = Frames(self._load_json_file(
-                                      frames_with_conflict, type=list))
-        conflicting = []
-        merging = []
-
-        for conflict_frame in conflict_file_frames:
-            try:
-                original_frame = self.frames[conflict_frame.id]
-
-                if original_frame != conflict_frame:
-                    # frame from conflict frames file conflicts with frame
-                    # from original frames file
-                    conflicting.append(conflict_frame)
-
-            except KeyError:
-                # conflicting frame doesn't exist in original frame
-                merging.append(conflict_frame)
-
-        return conflicting, merging
-
     def _validate_inclusion_options(self, included, excluded):
         return not bool(
             included

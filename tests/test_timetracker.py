@@ -483,25 +483,7 @@ def test_tags_no_frames(timetracker):
     assert timetracker.tags() == []
 
 
-# merge
-
-@pytest.mark.datafiles(
-    TEST_FIXTURE_DIR / 'frames-with-conflict',
-    )
-def test_merge_report(timetracker, datafiles):
-    # Get report
-    timetracker.frames.add('foo', 4000, 4015, id='1', updated_at=4015)
-    timetracker.frames.add('bar', 4020, 4045, id='2', updated_at=4045)
-
-    conflicting, merging = timetracker.merge_report(
-        str(datafiles) + '/frames-with-conflict')
-
-    assert len(conflicting) == 1
-    assert len(merging) == 1
-
-    assert conflicting[0].id == '2'
-    assert merging[0].id == '3'
-
+# report
 
 def test_report(timetracker):
     timetracker.start('foo', tags=['A', 'B'])
@@ -592,7 +574,8 @@ def test_report_include_partial_frames(mocker, timetracker, date_as_unixtime,
     assert report["time"] == pytest.approx(sum_, abs=1e-3)
 
 
-# renaming project updates frame last_updated time
+# rename
+
 def test_rename_project_with_time(timetracker):
     """
     Renaming a project should update the "last_updated" time on any frame that
@@ -660,8 +643,8 @@ def test_rename_tag_with_time(timetracker):
     # assert timetracker.frames[1].updated_at.timestamp == 9000
     assert timetracker.frames[1].updated_at.timestamp > 4035
 
-# add
 
+# add
 
 def test_add_success(timetracker):
     """

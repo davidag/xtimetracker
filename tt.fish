@@ -124,10 +124,6 @@ complete -f -c tt -n '__fish_tt_using_command log' -s s -l csv -d "output csv"
 complete -f -c tt -n '__fish_tt_using_command log' -s g -l pager -d "view through pager"
 complete -f -c tt -n '__fish_tt_using_command log' -s G -l no-pager -d "don't vew through pager"
 
-# merge
-complete -f -c tt -n '__fish_tt_needs_sub' -a merge -d "merge existing frames with conflicting ones"
-complete -f -c tt -n '__fish_tt_using_command merge' -s f -l force -d "silently merge"
-
 # remove
 complete -f -c tt -n '__fish_tt_needs_sub' -a remove -d "Remove a frame"
 complete -f -c tt -n '__fish_tt_using_command remove' -a "(__fish_tt_get_frames)"
