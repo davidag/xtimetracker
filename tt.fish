@@ -127,10 +127,6 @@ complete -f -c tt -n '__fish_tt_using_command log' -s s -l csv -d "output csv"
 complete -f -c tt -n '__fish_tt_using_command log' -s g -l pager -d "view through pager"
 complete -f -c tt -n '__fish_tt_using_command log' -s G -l no-pager -d "don't vew through pager"
 
-# rename
-complete -f -c tt -n '__fish_tt_needs_sub' -a rename -d "Rename a project or tag"
-complete -f -c tt -n '__fish_tt_using_command rename' -a "(__fish_tt_get_projects) (__fish_tt_get_tags)"
-
 # report
 complete -f -c tt -n '__fish_tt_needs_sub' -a report -d "Display a report of time spent"
 complete -f -c tt -n '__fish_tt_using_command report' -s c -l current -d "include the running frame"

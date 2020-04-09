@@ -441,37 +441,3 @@ class TimeTracker:
 
         report['time'] = total.total_seconds()
         return report
-
-    def rename_project(self, old_project, new_project):
-        """Rename a project in all affected frames."""
-        if old_project not in self.projects():
-            raise TimeTrackerError('Project "%s" does not exist' % old_project)
-
-        updated_at = arrow.utcnow()
-        # rename project
-        for frame in self.frames:
-            if frame.project == old_project:
-                self.frames[frame.id] = frame._replace(
-                    project=new_project,
-                    updated_at=updated_at
-                )
-
-        self.frames.changed = True
-        self.save()
-
-    def rename_tag(self, old_tag, new_tag):
-        """Rename a tag in all affected frames."""
-        if old_tag not in self.tags():
-            raise TimeTrackerError('Tag "%s" does not exist' % old_tag)
-
-        updated_at = arrow.utcnow()
-        # rename tag
-        for frame in self.frames:
-            if old_tag in frame.tags:
-                self.frames[frame.id] = frame._replace(
-                    tags=[new_tag if t == old_tag else t for t in frame.tags],
-                    updated_at=updated_at
-                )
-
-        self.frames.changed = True
-        self.save()

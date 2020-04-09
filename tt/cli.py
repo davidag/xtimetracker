@@ -18,8 +18,6 @@ from .autocompletion import (
     get_frames,
     get_project_or_tag_completion,
     get_projects,
-    get_rename_name,
-    get_rename_types,
     get_tags,
 )
 from .file_utils import safe_save
@@ -228,7 +226,6 @@ def start(ctx, timetracker, gap, stop_, restart, args):
                     timetracker.current['project'])
                 )
             )
-
     current = timetracker.start(project, tags, gap=gap)
     click.echo("Starting project {}{} at {}".format(
         style('project', project),
@@ -1009,34 +1006,3 @@ def config(context, key, value, edit):
         wconfig.set(section, option, value)
         timetracker.config = wconfig
         timetracker.save()
-
-
-@cli.command()
-@click.argument('rename_type', required=True, metavar='TYPE',
-                autocompletion=get_rename_types)
-@click.argument('old_name', required=True, autocompletion=get_rename_name)
-@click.argument('new_name', required=True, autocompletion=get_rename_name)
-@click.pass_obj
-@catch_timetracker_error
-def rename(timetracker, rename_type, old_name, new_name):
-    """
-    Rename a project or tag.
-    """
-    if rename_type == 'tag':
-        timetracker.rename_tag(old_name, new_name)
-        click.echo('Renamed tag "{}" to "{}"'.format(
-                        style('tag', old_name),
-                        style('tag', new_name)
-                   ))
-    elif rename_type == 'project':
-        timetracker.rename_project(old_name, new_name)
-        click.echo('Renamed project "{}" to "{}"'.format(
-                        style('project', old_name),
-                        style('project', new_name)
-                   ))
-    else:
-        raise click.ClickException(style(
-            'error',
-            'You have to call rename with type "project" or "tag"; '
-            'you supplied "%s"' % rename_type
-        ))
