@@ -26,30 +26,6 @@ def create_timetracker():
     return TimeTracker(config_dir=config_dir)
 
 
-def confirm_project(project: str, existing_projects: Iterable):
-    """
-    Ask user to confirm creation of a new project
-    Returns True on accept and raises click.exceptions.Abort on reject
-    """
-    if project not in existing_projects:
-        msg = ("Project '%s' does not exist yet. Create it?"
-               % style('project', project))
-        click.confirm(msg, abort=True)
-    return True
-
-
-def confirm_tags(tags: Iterable, existing_tags: Iterable):
-    """
-    Ask user to confirm creation of new tags (each separately)
-    Returns True if all accepted and raises click.exceptions.Abort on reject
-    """
-    for tag in tags:
-        if tag not in existing_tags:
-            msg = "Tag '%s' does not exist yet. Create it?" % style('tag', tag)
-            click.confirm(msg, abort=True)
-    return True
-
-
 def style(name, element):
     def _style_tags(tags):
         if not tags:

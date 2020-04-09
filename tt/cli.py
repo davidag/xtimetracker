@@ -30,8 +30,6 @@ from .cli_utils import (
     apply_weekday_offset,
     build_csv,
     build_json,
-    confirm_project,
-    confirm_tags,
     create_timetracker,
     flatten_report_for_csv,
     format_timedelta,
@@ -174,17 +172,12 @@ def help(ctx, command):
 @click.option('-r', '--restart', is_flag=True, default=False,
               help="Restart last frame or last project frame if a project "
                    "is provided.")
-@click.option('-c', '--confirm-new-project', is_flag=True, default=False,
-              help="Confirm addition of new project.")
-@click.option('-b', '--confirm-new-tag', is_flag=True, default=False,
-              help="Confirm creation of new tag.")
 @click.argument('args', nargs=-1,
                 autocompletion=get_project_or_tag_completion)
 @click.pass_obj
 @click.pass_context
 @catch_timetracker_error
-def start(ctx, timetracker, gap, stop_, restart, confirm_new_project,
-          confirm_new_tag, args):
+def start(ctx, timetracker, gap, stop_, restart, args):
     """
     Start monitoring time for the given project.
     You can add tags indicating more specifically what you are working on with
@@ -225,14 +218,6 @@ def start(ctx, timetracker, gap, stop_, restart, confirm_new_project,
             frame = get_last_frame_from_project(timetracker, project)
             if frame:
                 tags.extend(frame.tags)
-
-    if (timetracker.config.getboolean('options', 'confirm_new_project') or
-            confirm_new_project):
-        confirm_project(project, timetracker.projects())
-
-    if (timetracker.config.getboolean('options', 'confirm_new_tag') or
-            confirm_new_tag):
-        confirm_tags(tags, timetracker.tags)
 
     if timetracker.is_started:
         if stop_on_start:
@@ -799,13 +784,9 @@ def frames(timetracker):
               help="Date and time of start of tracked activity")
 @click.option('-t', '--to', required=True, type=DateTime,
               help="Date and time of end of tracked activity")
-@click.option('-c', '--confirm-new-project', is_flag=True, default=False,
-              help="Confirm addition of new project.")
-@click.option('-b', '--confirm-new-tag', is_flag=True, default=False,
-              help="Confirm creation of new tag.")
 @click.pass_obj
 @catch_timetracker_error
-def add(timetracker, args, from_, to, confirm_new_project, confirm_new_tag):
+def add(timetracker, args, from_, to):
     """
     Add time to a project with tag(s) that was not tracked live.
     """
@@ -816,18 +797,8 @@ def add(timetracker, args, from_, to, confirm_new_project, confirm_new_tag):
     if not project:
         raise click.ClickException("No project given.")
 
-    # Confirm creation of new project if that option is set
-    if (timetracker.config.getboolean('options', 'confirm_new_project') or
-            confirm_new_project):
-        confirm_project(project, timetracker.projects())
-
     # Parse all the tags
     tags = parse_tags(args)
-
-    # Confirm creation of new tag(s) if that option is set
-    if (timetracker.config.getboolean('options', 'confirm_new_tag') or
-            confirm_new_tag):
-        confirm_tags(tags, timetracker.tags)
 
     # add a new frame, call timetracker save to update state files
     frame = timetracker.add(
@@ -846,14 +817,10 @@ def add(timetracker, args, from_, to, confirm_new_project, confirm_new_tag):
 
 
 @cli.command(context_settings={'ignore_unknown_options': True})
-@click.option('-c', '--confirm-new-project', is_flag=True, default=False,
-              help="Confirm addition of new project.")
-@click.option('-b', '--confirm-new-tag', is_flag=True, default=False,
-              help="Confirm creation of new tag.")
 @click.argument('id', required=False, autocompletion=get_frames)
 @click.pass_obj
 @catch_timetracker_error
-def edit(timetracker, confirm_new_project, confirm_new_tag, id):
+def edit(timetracker, id):
     """
     Edit a frame.
 
@@ -914,15 +881,7 @@ def edit(timetracker, confirm_new_project, confirm_new_tag, id):
         try:
             data = json.loads(output)
             project = data['project']
-            # Confirm creation of new project if that option is set
-            if (timetracker.config.getboolean('options', 'confirm_new_project')
-                    or confirm_new_project):
-                confirm_project(project, timetracker.projects())
             tags = data['tags']
-            # Confirm creation of new tag(s) if that option is set
-            if (timetracker.config.getboolean('options', 'confirm_new_tag') or
-                    confirm_new_tag):
-                confirm_tags(tags, timetracker.tags)
             start = arrow.get(data['start'], datetime_format).replace(
                 tzinfo=local_tz).to('utc')
             stop = arrow.get(data['stop'], datetime_format).replace(
