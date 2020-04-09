@@ -934,38 +934,6 @@ def edit(timetracker, id):
     )
 
 
-@cli.command(context_settings={'ignore_unknown_options': True})
-@click.argument('id', autocompletion=get_frames)
-@click.option('-f', '--force', is_flag=True,
-              help="Don't ask for confirmation.")
-@click.pass_obj
-@catch_timetracker_error
-def remove(timetracker, id, force):
-    """
-    Remove a frame. You can specify the frame either by id or by position
-    (ex: `-1` for the last frame).
-    """
-    frame = get_frame_from_argument(timetracker, id)
-    id = frame.id
-
-    if not force:
-        click.confirm(
-            "You are about to remove frame "
-            "{project}{tags} from {start} to {stop}, continue?".format(
-                project=style('project', frame.project),
-                tags=(" " if frame.tags else "") + style('tags', frame.tags),
-                start=style('time', '{:HH:mm}'.format(frame.start)),
-                stop=style('time', '{:HH:mm}'.format(frame.stop))
-            ),
-            abort=True
-        )
-
-    del timetracker.frames[id]
-
-    timetracker.save()
-    click.echo("Frame removed.")
-
-
 @cli.command()
 @click.argument('key', required=False, metavar='SECTION.OPTION')
 @click.argument('value', required=False)
