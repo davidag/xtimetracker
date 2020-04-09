@@ -254,39 +254,33 @@ def start(ctx, timetracker, gap, stop_, restart, confirm_new_project,
 
 
 @cli.command(context_settings={'ignore_unknown_options': True})
+@click.option('-c', '--cancel', is_flag=True, default=False,
+              help="Cancel current project monitoring.")
 @click.option('--at', 'at_', type=DateTime, default=None,
               help=('Stop frame at this time. Must be in '
                     '(YYYY-MM-DDT)?HH:MM(:SS)? format.'))
 @click.pass_obj
 @catch_timetracker_error
-def stop(timetracker, at_):
+def stop(timetracker, discard, at_):
     """
-    Stop monitoring time for the current project.
+    Stop or cancel monitoring time for the current project.
     """
-    frame = timetracker.stop(stop_at=at_)
-    output_str = "Stopping project {}{}, started {} and stopped {}. (id: {})"
-    click.echo(output_str.format(
-        style('project', frame.project),
-        (" " if frame.tags else "") + style('tags', frame.tags),
-        style('time', frame.start.humanize()),
-        style('time', frame.stop.humanize()),
-        style('short_id', frame.id),
-    ))
-    timetracker.save()
-
-
-@cli.command()
-@click.pass_obj
-@catch_timetracker_error
-def cancel(timetracker):
-    """
-    Cancel the project being currently recorded.
-    """
-    old = timetracker.cancel()
-    click.echo("Canceling the timer for project {}{}".format(
-        style('project', old['project']),
-        (" " if old['tags'] else "") + style('tags', old['tags'])
-    ))
+    if discard:
+        old = timetracker.cancel()
+        click.echo("Canceling current monitoring for project {}{}".format(
+            style('project', old['project']),
+            (" " if old['tags'] else "") + style('tags', old['tags'])
+        ))
+    else:
+        frame = timetracker.stop(stop_at=at_)
+        output_str = "Stopping project {}{}, started {} and stopped {}. (id: {})"
+        click.echo(output_str.format(
+            style('project', frame.project),
+            (" " if frame.tags else "") + style('tags', frame.tags),
+            style('time', frame.start.humanize()),
+            style('time', frame.stop.humanize()),
+            style('short_id', frame.id),
+        ))
     timetracker.save()
 
 
