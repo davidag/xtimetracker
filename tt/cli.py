@@ -735,45 +735,6 @@ def log(timetracker, current, from_, to, projects, exclude_projects, tags,
     _final_print(lines)
 
 
-@cli.command()
-@click.argument('tags', nargs=-1,
-                autocompletion=get_tags)
-@click.pass_obj
-@catch_timetracker_error
-def projects(timetracker, tags):
-    """
-    Display the list of all the existing projects, or only those matching all
-    the provided tag(s).
-    """
-    for project in timetracker.projects(tags):
-        click.echo(style('project', project))
-
-
-@cli.command()
-@click.argument('projects', nargs=-1,
-                autocompletion=get_projects)
-@click.pass_obj
-@catch_timetracker_error
-def tags(timetracker, projects):
-    """
-    Display the list of all the tags, or only those matching all the provided
-    projects.
-    """
-    for tag in timetracker.tags(projects):
-        click.echo(style('tag', tag))
-
-
-@cli.command()
-@click.pass_obj
-@catch_timetracker_error
-def frames(timetracker):
-    """
-    Display the list of all frame IDs.
-    """
-    for frame in timetracker.frames:
-        click.echo(style('short_id', frame.id))
-
-
 @cli.command(context_settings={'ignore_unknown_options': True})
 @click.argument('args', nargs=-1,
                 autocompletion=get_project_or_tag_completion)

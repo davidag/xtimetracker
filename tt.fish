@@ -75,10 +75,7 @@ function __fish_tt_needs_project -d "check if we need a project"
 end
 
 # ungrouped
-complete -f -c tt -n '__fish_tt_needs_sub' -a frames -d "Display the list of all frame IDs"
 complete -f -c tt -n '__fish_tt_needs_sub' -a help -d "Display help information"
-complete -f -c tt -n '__fish_tt_needs_sub' -a projects -d "Display the list of projects"
-complete -f -c tt -n '__fish_tt_needs_sub' -a tags -d "Display the list of tags"
 
 # add
 complete -f -c tt -n '__fish_tt_needs_sub' -a add -d "Add time for project with tag(s) that was not tracked live"

@@ -455,40 +455,6 @@ def test_timetracker_save_calls_safe_save(mocker, config_dir, timetracker):
     assert save_mock.call_args[0][0] == frames_file
 
 
-# projects
-
-def test_projects(timetracker):
-    for name in ('foo', 'bar', 'bar', 'bar', 'foo', 'lol'):
-        timetracker.frames.add(name, 4000, 4000)
-
-    assert timetracker.projects() == ['bar', 'foo', 'lol']
-
-
-def test_projects_no_frames(timetracker):
-    assert timetracker.projects() == []
-
-
-# tags
-
-def test_tags(timetracker):
-    samples = (
-        ('foo', ('A', 'D')),
-        ('bar', ('A', 'C')),
-        ('foo', ('B', 'C')),
-        ('lol', ()),
-        ('bar', ('C'))
-    )
-
-    for name, tags in samples:
-        timetracker.frames.add(name, 4000, 4000, tags)
-
-    assert timetracker.tags() == ['A', 'B', 'C', 'D']
-
-
-def test_tags_no_frames(timetracker):
-    assert timetracker.tags() == []
-
-
 # report
 
 def test_report(timetracker):
