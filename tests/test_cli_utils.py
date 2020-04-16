@@ -15,8 +15,6 @@ import datetime
 import os
 import pytest
 from io import StringIO
-from unittest.mock import patch
-from click.exceptions import Abort
 from dateutil.tz import tzutc
 
 from tt.cli_utils import (
@@ -27,6 +25,7 @@ from tt.cli_utils import (
     frames_to_json,
     get_start_time_for_period,
     get_last_frame_from_project,
+    parse_project,
     parse_tags,
     json_encoder,
 )
@@ -71,6 +70,21 @@ def test_apply_weekday_offset(monday_start, week_start, new_start):
         result = arrow.get(new_start, "YYYY MM D")
         assert apply_weekday_offset(original_start, week_start) == result
 
+
+# parse_project
+
+@pytest.mark.parametrize('args, parsed_project', [
+    (['+ham', '+n', '+eggs'], ''),
+    (['ham', 'n', '+eggs'], 'ham n'),
+    (['ham', '+n', 'eggs'], 'ham'),
+    (['ham', 'jelly', 'eggs', '+food'], 'ham jelly eggs'),
+])
+def test_parse_project(args, parsed_project):
+    project = parse_project(args)
+    assert project == parsed_project
+
+
+# parse_tags
 
 @pytest.mark.parametrize('args, parsed_tags', [
     (['+ham', '+n', '+eggs'], ['ham', 'n', 'eggs']),

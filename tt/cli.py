@@ -5,7 +5,6 @@
 # SPDX-License-Identifier: MIT
 
 import datetime
-import itertools
 import json
 import operator
 from functools import reduce, wraps
@@ -36,7 +35,9 @@ from .cli_utils import (
     get_frame_from_argument,
     get_last_frame_from_project,
     get_start_time_for_period,
+    is_current_tracking_data,
     style,
+    parse_project,
     parse_tags,
 )
 from .utils import sorted_groupby
@@ -165,8 +166,6 @@ def help(ctx, command):
 @click.option('-g/-G', '--gap/--no-gap', 'gap', is_flag=True, default=True,
               help=("Leave (or not) gap between end time of previous project "
                     "and start time of the current."))
-@click.option('-s/-S', '--stop/--no-stop', 'stop_', default=None,
-              help="Stop (or not) an already running project.")
 @click.option('-r', '--restart', is_flag=True, default=False,
               help="Restart last frame or last project frame if a project "
                    "is provided.")
@@ -175,7 +174,7 @@ def help(ctx, command):
 @click.pass_obj
 @click.pass_context
 @catch_timetracker_error
-def start(ctx, timetracker, gap, stop_, restart, args):
+def start(ctx, timetracker, gap, restart, args):
     """
     Start monitoring time for the given project.
     You can add tags indicating more specifically what you are working on with
@@ -185,40 +184,34 @@ def start(ctx, timetracker, gap, stop_, restart, args):
     `options.stop_on_start` is true, it will be stopped before the new
     project is started.
     """
-    stop_on_start = stop_ or (
-        stop_ is None and
-        timetracker.config.getboolean('options', 'stop_on_start')
-    )
+    stop_on_start = timetracker.config.getboolean('options', 'stop_on_start')
     restart_on_start = (
         restart or
         timetracker.config.getboolean('options', 'restart_on_start')
     )
-    project = ' '.join(
-        itertools.takewhile(lambda s: not s.startswith('+'), args)
-    )
+
+    project = parse_project(args)
     tags = parse_tags(args)
 
     if not project and not restart_on_start:
         raise click.ClickException("No project given.")
-    elif not project and restart_on_start:
-        if timetracker.is_started:
+
+    if restart_on_start and timetracker.is_started:
+        tags.extend(timetracker.current['tags'])
+        if not project:
             project = timetracker.current['project']
-            tags.extend(timetracker.current['tags'])
+
+    if restart_on_start and not timetracker.is_started:
+        if project:
+            frame = get_last_frame_from_project(timetracker, project)
         else:
             frame = get_frame_from_argument(timetracker, "-1")
+        if frame:
             project = frame.project
             tags.extend(frame.tags)
-    elif project and restart_on_start:
-        if (timetracker.is_started
-                and project == timetracker.current['project']):
-            tags.extend(timetracker.current['tags'])
-        else:
-            frame = get_last_frame_from_project(timetracker, project)
-            if frame:
-                tags.extend(frame.tags)
 
     if timetracker.is_started:
-        if stop_on_start:
+        if stop_on_start and not is_current_tracking_data(timetracker, project, tags):
             ctx.invoke(stop)
         else:
             raise click.ClickException(
@@ -226,6 +219,7 @@ def start(ctx, timetracker, gap, stop_, restart, args):
                     timetracker.current['project'])
                 )
             )
+
     current = timetracker.start(project, tags, gap=gap)
     click.echo("Starting project {}{} at {}".format(
         style('project', project),
@@ -748,10 +742,7 @@ def add(timetracker, args, from_, to):
     """
     Add time to a project with tag(s) that was not tracked live.
     """
-    # parse project name from args
-    project = ' '.join(
-        itertools.takewhile(lambda s: not s.startswith('+'), args)
-    )
+    project = parse_project(args)
     if not project:
         raise click.ClickException("No project given.")
 

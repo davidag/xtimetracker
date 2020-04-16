@@ -118,30 +118,22 @@ def test_start_doesnt_support_frame_references(runner, timetracker_df):
 
 
 @pytest.mark.parametrize(
-    'gap,stop,cfg,error', [
-        ('-g', '-s', True, False),
-        ('-g', '-s', False, False),
-        ('-g', '-S', True, True),
-        ('-g', '-S', False, True),
-        ('-G', '-s', True, False),
-        ('-G', '-s', False, False),
-        ('-G', '-S', True, True),
-        ('-G', '-S', False, True),
-        ('-g', '', True, False),
-        ('-g', '', False, True),
-        ('-G', '', True, False),
-        ('-G', '', False, True),
+    'gap,cfg,error', [
+        ('-g', True, False),
+        ('-g', False, True),
+        ('-G', True, False),
+        ('-G', False, True),
     ]
 )
 def test_start_with_already_started_project(
-        runner, timetracker, gap, stop, cfg, error):
+        runner, timetracker, gap, cfg, error):
     timetracker.config.set('options', 'stop_on_start', str(cfg))
     assert timetracker.config.getboolean('options', 'stop_on_start') == cfg
     result = runner.invoke(cli.start, 'project-1', obj=timetracker)
     assert result.exit_code == 0
     result = runner.invoke(
         cli.start,
-        ['project-2', gap, stop],
+        ['project-2', gap],
         obj=timetracker)
     if error:
         assert result.exit_code == 1
@@ -157,8 +149,9 @@ def test_start_restart_running_frame(runner, timetracker):
     assert result.exit_code == 0
     assert len(timetracker.frames) == 0
     result = runner.invoke(cli.start, ['-r'], obj=timetracker)
-    assert result.exit_code == 0
-    assert len(timetracker.frames) == 1
+    assert result.exit_code == 1
+    assert 'already started' in result.output
+    assert len(timetracker.frames) == 0
     assert timetracker.current['project'] == 'project-1'
     assert {'mytag'} == set(timetracker.current['tags'])
 
@@ -177,7 +170,7 @@ def test_start_restart_running_frame_plus_tags(runner, timetracker):
 
 
 def test_start_restart_last_frame(runner, timetracker):
-    timetracker.config.set('options', 'stop_on_start', "true")
+    timetracker.config.set('options', 'stop_on_start', "false")
     result = runner.invoke(cli.start, 'project-1', obj=timetracker)
     assert result.exit_code == 0
     result = runner.invoke(cli.stop, obj=timetracker)
@@ -189,16 +182,16 @@ def test_start_restart_last_frame(runner, timetracker):
 
 
 def test_start_restart_last_frame_plus_tags(runner, timetracker):
-    timetracker.config.set('options', 'stop_on_start', "true")
-    result = runner.invoke(cli.start, ['project-1', '+tag1'], obj=timetracker)
+    timetracker.config.set('options', 'stop_on_start', "false")
+    result = runner.invoke(cli.start, ['project-2', '+tag2'], obj=timetracker)
     assert result.exit_code == 0
     result = runner.invoke(cli.stop, obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(cli.start, ['-r', '+tag2'], obj=timetracker)
+    result = runner.invoke(cli.start, ['-r', '+tag3'], obj=timetracker)
     assert result.exit_code == 0
     assert len(timetracker.frames) == 1
-    assert timetracker.current['project'] == 'project-1'
-    assert set(['tag1', 'tag2']) == set(timetracker.current['tags'])
+    assert timetracker.current['project'] == 'project-2'
+    assert set(['tag2', 'tag3']) == set(timetracker.current['tags'])
 
 
 def test_start_restart_last_project_frame(runner, timetracker):
@@ -248,22 +241,48 @@ def test_start_restart_new_project_does_not_fail(runner, timetracker):
     assert timetracker.current['project'] == 'project-1'
 
 
-def test_start_restart_config_option_last_frame(runner, timetracker):
-    timetracker.config.set('options', 'restart_on_start', "true")
-    runner.invoke(cli.start, ['project-1', '+tag1'], obj=timetracker)
-    runner.invoke(cli.stop, obj=timetracker)
-    runner.invoke(cli.start, ['project-1', '+tag2'], obj=timetracker)
-    assert timetracker.current['project'] == 'project-1'
-    assert set(['tag1', 'tag2']) == set(timetracker.current['tags'])
-
-
-def test_start_restart_config_option_current(runner, timetracker):
+def test_start_restart_config_current_project_explicit_new_tags(runner, timetracker):
     timetracker.config.set('options', 'restart_on_start', "true")
     timetracker.config.set('options', 'stop_on_start', "true")
-    runner.invoke(cli.start, ['project-1', '+tag1'], obj=timetracker)
-    runner.invoke(cli.start, ['project-1', '+tag2'], obj=timetracker)
+    result = runner.invoke(cli.start, ['project-1', '+tag1'], obj=timetracker)
+    assert result.exit_code == 0
+    result = runner.invoke(cli.start, ['project-1', '+tag2'], obj=timetracker)
+    assert result.exit_code == 0
     assert timetracker.current['project'] == 'project-1'
     assert set(['tag1', 'tag2']) == set(timetracker.current['tags'])
+
+
+def test_start_restart_config_current_project_explicit(runner, timetracker):
+    timetracker.config.set('options', 'restart_on_start', "true")
+    timetracker.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(cli.start, ['project-1', '+tag1', '+tag2'], obj=timetracker)
+    assert result.exit_code == 0
+    result = runner.invoke(cli.start, ['project-1'], obj=timetracker)
+    assert result.exit_code == 1
+    assert 'already started' in result.output
+    assert timetracker.current['project'] == 'project-1'
+
+
+def test_start_restart_config_current_project_and_tags_implicit(runner, timetracker):
+    timetracker.config.set('options', 'restart_on_start', "true")
+    timetracker.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(cli.start, ['project-1', '+tag1'], obj=timetracker)
+    assert result.exit_code == 0
+    result = runner.invoke(cli.start, [], obj=timetracker)
+    assert result.exit_code == 1
+    assert 'already started' in result.output
+    assert timetracker.current['project'] == 'project-1'
+
+
+def test_start_restart_config_current_project_implicit_same_tags(runner, timetracker):
+    timetracker.config.set('options', 'restart_on_start', "true")
+    timetracker.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(cli.start, ['project-1', '+tag1'], obj=timetracker)
+    assert result.exit_code == 0
+    result = runner.invoke(cli.start, ['+tag1'], obj=timetracker)
+    assert result.exit_code == 1
+    assert 'already started' in result.output
+    assert timetracker.current['project'] == 'project-1'
 
 
 # tt help

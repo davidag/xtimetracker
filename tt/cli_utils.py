@@ -12,7 +12,6 @@ import json
 import operator
 import os
 from io import StringIO
-from typing import Iterable
 
 import arrow
 import click
@@ -97,6 +96,7 @@ def options(opt_list):
     return value_proc
 
 
+# [refactor] - get_frame_from_argument: put into TT (maybe extending frames()?)
 def get_frame_from_argument(timetracker, arg):
     """
     Get a frame from a command line argument which can either be a
@@ -126,6 +126,7 @@ def get_frame_from_argument(timetracker, arg):
         )
 
 
+# [refactor] - get_last_frame_from_project: uses? demeter? move into timetracker?
 def get_last_frame_from_project(timetracker, project):
     if project not in timetracker.projects():
         return None
@@ -165,6 +166,11 @@ def get_start_time_for_period(period):
     return start_time
 
 
+def is_current_tracking_data(timetracker, project, tags):
+    return (timetracker.current['project'] == project and
+            set(timetracker.current['tags']) == set(tags))
+
+
 def apply_weekday_offset(start_time, week_start):
     """
     Apply the offset required to move the start date `start_time` of a week
@@ -180,6 +186,17 @@ def apply_weekday_offset(start_time, week_start):
     now = datetime.datetime.now()
     offset = weekdays[new_start] - 7 * (weekdays[new_start] > now.weekday())
     return start_time.shift(days=offset)
+
+
+def parse_project(values_list):
+    """
+    Return a string with the project name.
+
+    Concatenate all values until one is a tag (ie. starts with '+').
+    """
+    return ' '.join(
+        itertools.takewhile(lambda s: not s.startswith('+'), values_list)
+    )
 
 
 def parse_tags(values_list):

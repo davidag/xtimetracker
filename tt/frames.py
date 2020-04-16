@@ -13,6 +13,7 @@ import arrow
 HEADERS = ('start', 'stop', 'project', 'id', 'tags', 'updated_at')
 
 
+# [refactor] - use a create() method factory instead of __new__()
 class Frame(namedtuple('Frame', HEADERS)):
     def __new__(cls, start, stop, project, id, tags=None, updated_at=None,):
         try:
