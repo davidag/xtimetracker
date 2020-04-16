@@ -246,11 +246,11 @@ my project = A B
     assert timetracker.current['tags'] == ['C', 'D', 'A', 'B']
 
 
-def test_start_nogap(timetracker):
+def test_start_stretch(timetracker):
 
     timetracker.start('foo')
     timetracker.stop()
-    timetracker.start('bar', gap=False)
+    timetracker.start('bar', stretch=True)
 
     assert timetracker.frames[-1].stop == timetracker.current['start']
 

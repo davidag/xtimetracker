@@ -238,7 +238,7 @@ class TimeTracker:
         frame = self.frames.add(project, from_date, to_date, tags=tags)
         return frame
 
-    def start(self, project, tags=None, gap=True):
+    def start(self, project, tags=None, stretch=False):
         assert not self.is_started
         default_tags = self.config.getlist('default_tags', project)
         tags = (tags or []) + default_tags
@@ -246,9 +246,10 @@ class TimeTracker:
             'project': project,
             'tags': deduplicate(tags)
         }
-        if not gap:
-            stop_of_prev_frame = self.frames[-1].stop
-            new_frame['start'] = stop_of_prev_frame
+        if stretch and len(self.frames) > 0:
+            max_elapsed = self.config.getint('options', 'autostretch_max_elapsed_secs', 28800)
+            if arrow.now().timestamp - self.frames[-1].stop.timestamp < max_elapsed:
+                new_frame['start'] = self.frames[-1].stop
         self.current = new_frame
         return self.current
 

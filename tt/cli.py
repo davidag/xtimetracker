@@ -163,9 +163,8 @@ def help(ctx, command):
 
 
 @cli.command()
-@click.option('-g/-G', '--gap/--no-gap', 'gap', is_flag=True, default=True,
-              help=("Leave (or not) gap between end time of previous project "
-                    "and start time of the current."))
+@click.option('-s', '--stretch', is_flag=True, default=False,
+              help=("Stretch start time to continue after last tracked activity."))
 @click.option('-r', '--restart', is_flag=True, default=False,
               help="Restart last frame or last project frame if a project "
                    "is provided.")
@@ -174,7 +173,7 @@ def help(ctx, command):
 @click.pass_obj
 @click.pass_context
 @catch_timetracker_error
-def start(ctx, timetracker, gap, restart, args):
+def start(ctx, timetracker, stretch, restart, args):
     """
     Start monitoring time for the given project.
     You can add tags indicating more specifically what you are working on with
@@ -184,24 +183,22 @@ def start(ctx, timetracker, gap, restart, args):
     `options.stop_on_start` is true, it will be stopped before the new
     project is started.
     """
-    stop_on_start = timetracker.config.getboolean('options', 'stop_on_start')
-    restart_on_start = (
-        restart or
-        timetracker.config.getboolean('options', 'restart_on_start')
-    )
+    stop_flag = timetracker.config.getboolean('options', 'stop_on_start')
+    restart_flag = restart or timetracker.config.getboolean('options', 'restart_on_start')
+    stretch_flag = stretch or timetracker.config.getboolean('options', 'autostretch_on_start')
 
     project = parse_project(args)
     tags = parse_tags(args)
 
-    if not project and not restart_on_start:
+    if not project and not restart_flag:
         raise click.ClickException("No project given.")
 
-    if restart_on_start and timetracker.is_started:
+    if restart_flag and timetracker.is_started:
         tags.extend(timetracker.current['tags'])
         if not project:
             project = timetracker.current['project']
 
-    if restart_on_start and not timetracker.is_started:
+    if restart_flag and not timetracker.is_started:
         if project:
             frame = get_last_frame_from_project(timetracker, project)
         else:
@@ -211,7 +208,7 @@ def start(ctx, timetracker, gap, restart, args):
             tags.extend(frame.tags)
 
     if timetracker.is_started:
-        if stop_on_start and not is_current_tracking_data(timetracker, project, tags):
+        if stop_flag and not is_current_tracking_data(timetracker, project, tags):
             ctx.invoke(stop)
         else:
             raise click.ClickException(
@@ -220,7 +217,7 @@ def start(ctx, timetracker, gap, restart, args):
                 )
             )
 
-    current = timetracker.start(project, tags, gap=gap)
+    current = timetracker.start(project, tags, stretch_flag)
     click.echo("Starting project {}{} at {}".format(
         style('project', project),
         (" " if current['tags'] else "") + style('tags', current['tags']),

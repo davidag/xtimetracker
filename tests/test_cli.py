@@ -118,22 +118,19 @@ def test_start_doesnt_support_frame_references(runner, timetracker_df):
 
 
 @pytest.mark.parametrize(
-    'gap,cfg,error', [
-        ('-g', True, False),
-        ('-g', False, True),
-        ('-G', True, False),
-        ('-G', False, True),
+    'stop_cfg,error', [
+        (True, False),
+        (False, True),
     ]
 )
-def test_start_with_already_started_project(
-        runner, timetracker, gap, cfg, error):
-    timetracker.config.set('options', 'stop_on_start', str(cfg))
-    assert timetracker.config.getboolean('options', 'stop_on_start') == cfg
+def test_start_with_already_started_project(runner, timetracker, stop_cfg, error):
+    timetracker.config.set('options', 'stop_on_start', str(stop_cfg))
+    assert timetracker.config.getboolean('options', 'stop_on_start') == stop_cfg
     result = runner.invoke(cli.start, 'project-1', obj=timetracker)
     assert result.exit_code == 0
     result = runner.invoke(
         cli.start,
-        ['project-2', gap],
+        ['project-2'],
         obj=timetracker)
     if error:
         assert result.exit_code == 1
@@ -141,6 +138,71 @@ def test_start_with_already_started_project(
     else:
         assert result.exit_code == 0
         assert 'Error' not in result.output
+
+
+@pytest.mark.parametrize(
+    'stretch_opt,stretch_cfg', [
+        ('-s', True),
+        ('-s', False),
+        ('', True),
+        ('', False),
+    ]
+)
+def test_start_stretching_start_date(runner, timetracker, mocker, stretch_opt, stretch_cfg):
+    timetracker.config.set('options', 'autostretch_on_start', str(stretch_cfg))
+    # Fix start datetime from previous activity
+    mocker.patch('arrow.arrow.datetime', wraps=datetime)
+    arrow.arrow.datetime.now.return_value = datetime(2019, 4, 1, 14, 0, 0, tzinfo=tzlocal())
+    # Start and stop previous activity (with a duration of 30 minutes))
+    result = runner.invoke(cli.start, ['project-1', '+tag1'], obj=timetracker)
+    assert result.exit_code == 0
+    arrow.arrow.datetime.now.return_value = datetime(2019, 4, 1, 14, 30, 0, tzinfo=tzlocal())
+    result = runner.invoke(cli.stop, obj=timetracker)
+    assert result.exit_code == 0
+    # Start a new activity half hour later
+    arrow.arrow.datetime.now.return_value = datetime(2019, 4, 1, 15, 0, 0, tzinfo=tzlocal())
+    result = runner.invoke(cli.start, [stretch_opt, 'project-2', '+tag2'], obj=timetracker)
+    assert result.exit_code == 0
+    if stretch_opt or stretch_cfg:
+        assert (timetracker.current['start'].datetime ==
+                datetime(2019, 4, 1, 14, 30, 0, tzinfo=tzlocal()))
+    else:
+        assert (timetracker.current['start'].datetime ==
+                datetime(2019, 4, 1, 15, 0, 0, tzinfo=tzlocal()))
+
+
+@pytest.mark.parametrize(
+    'elapsed_secs,stretched', [
+        (120, True),
+        (7200, True),
+        (28799, True),
+        (28800, False),
+        (53100, False),
+        (153100, False),
+    ]
+)
+def test_start_stretching_previous_day(runner, timetracker, mocker, elapsed_secs, stretched):
+    timetracker.config.set('options', 'autostretch_on_start', 'true')
+    # Fix start datetime from previous activity
+    mocker.patch('arrow.arrow.datetime', wraps=datetime)
+    fixed_dt = datetime(2019, 4, 1, 14, 0, 0, tzinfo=tzlocal())
+    arrow.arrow.datetime.now.return_value = fixed_dt
+    # Start and stop previous activity (with a duration of 30 minutes))
+    result = runner.invoke(cli.start, ['project-1', '+tag1'], obj=timetracker)
+    assert result.exit_code == 0
+    arrow.arrow.datetime.now.return_value += timedelta(minutes=30)
+    result = runner.invoke(cli.stop, obj=timetracker)
+    assert result.exit_code == 0
+    # Start a new activity on a different day
+    arrow.arrow.datetime.now.return_value += timedelta(seconds=elapsed_secs)
+    result = runner.invoke(cli.start, ['project-2', '+tag2'], obj=timetracker)
+    assert result.exit_code == 0
+    if stretched:
+        assert (timetracker.current['start'].datetime ==
+                fixed_dt + timedelta(seconds=30*60))
+    else:
+        assert (timetracker.current['start'].datetime ==
+                fixed_dt + timedelta(seconds=30*60+elapsed_secs))
 
 
 def test_start_restart_running_frame(runner, timetracker):
