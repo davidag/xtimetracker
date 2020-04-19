@@ -229,23 +229,20 @@ def start(ctx, timetracker, stretch, restart, args):
 @cli.command(context_settings={'ignore_unknown_options': True})
 @click.option('-c', '--cancel', is_flag=True, default=False,
               help="Cancel current project monitoring.")
-@click.option('--at', 'at_', type=DateTime, default=None,
-              help=('Stop frame at this time. Must be in '
-                    '(YYYY-MM-DDT)?HH:MM(:SS)? format.'))
 @click.pass_obj
 @catch_timetracker_error
-def stop(timetracker, discard, at_):
+def stop(timetracker, cancel):
     """
     Stop or cancel monitoring time for the current project.
     """
-    if discard:
+    if cancel:
         old = timetracker.cancel()
         click.echo("Canceling current monitoring for project {}{}".format(
             style('project', old['project']),
             (" " if old['tags'] else "") + style('tags', old['tags'])
         ))
     else:
-        frame = timetracker.stop(stop_at=at_)
+        frame = timetracker.stop()
         output_str = "Stopping project {}{}, started {} and stopped {}. (id: {})"
         click.echo(output_str.format(
             style('project', frame.project),

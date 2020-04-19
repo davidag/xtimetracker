@@ -253,35 +253,21 @@ class TimeTracker:
         self.current = new_frame
         return self.current
 
-    def stop(self, stop_at=None):
+    def stop(self):
         if not self.is_started:
             raise TimeTrackerError("No project started.")
-
-        old = self.current
-
-        if stop_at is None:
-            # One cannot use `arrow.now()` as default argument. Default
-            # arguments are evaluated when a function is defined, not when its
-            # called. Since there might be huge delays between defining this
-            # stop function and calling it, the value of `stop_at` could be
-            # outdated if defined using a default argument.
-            stop_at = arrow.now()
-        if old['start'] > stop_at:
-            raise TimeTrackerError('Task cannot end before it starts.')
-        if stop_at > arrow.now():
-            raise TimeTrackerError('Task cannot end in the future.')
-
         frame = self.frames.add(
-            old['project'], old['start'], stop_at, tags=old['tags']
+            self.current['project'],
+            self.current['start'],
+            arrow.now(),
+            tags=self.current['tags']
         )
         self.current = None
-
         return frame
 
     def cancel(self):
         if not self.is_started:
             raise TimeTrackerError("No project started.")
-
         old_current = self.current
         self.current = None
         return old_current

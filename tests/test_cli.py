@@ -523,19 +523,3 @@ def test_report_one_day(runner, timetracker_df):
     assert result.exit_code == 0
     report = json.loads(result.output)
     assert report['time'] == 20001.0
-
-
-# tt stop
-
-@pytest.mark.parametrize('at_dt', VALID_TIMES_DATA)
-def test_stop_valid_time(runner, timetracker, mocker, at_dt):
-    mocker.patch('arrow.arrow.datetime', wraps=datetime)
-    start_dt = datetime(2019, 4, 10, 14, 0, 0, tzinfo=tzlocal())
-    arrow.arrow.datetime.now.return_value = start_dt
-    result = runner.invoke(cli.start, ['a-project'], obj=timetracker)
-    assert result.exit_code == 0
-    # Simulate one hour has elapsed, so that 'at_dt' is older than now()
-    # but newer than the start date.
-    arrow.arrow.datetime.now.return_value = (start_dt + timedelta(hours=1))
-    result = runner.invoke(cli.stop, ['--at', at_dt], obj=timetracker)
-    assert result.exit_code == 0

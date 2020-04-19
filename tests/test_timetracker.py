@@ -288,24 +288,6 @@ def test_stop_no_project(timetracker):
         timetracker.stop()
 
 
-def test_stop_started_project_at(timetracker):
-    timetracker.start('foo')
-    now = arrow.now()
-
-    with pytest.raises(TimeTrackerError):
-        time_str = '1970-01-01T00:00'
-        time_obj = arrow.get(time_str)
-        timetracker.stop(stop_at=time_obj)
-
-    with pytest.raises(ValueError):
-        time_str = '2999-31-12T23:59'
-        time_obj = arrow.get(time_str)
-        timetracker.stop(stop_at=time_obj)
-
-    timetracker.stop(stop_at=now)
-    assert timetracker.frames[-1].stop == now
-
-
 # cancel
 
 def test_cancel_started_project(timetracker):
