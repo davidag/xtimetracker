@@ -127,7 +127,7 @@ def catch_timetracker_error(func):
     return wrapper
 
 
-@click.group()
+@click.group(invoke_without_command=True)
 @click.version_option(version=__version__, prog_name='tt')
 @click.pass_context
 def cli(ctx):
@@ -138,6 +138,8 @@ def cli(ctx):
     # This is the main command group, needed by click in order
     # to handle the subcommands
     ctx.obj = create_timetracker()
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(status)
 
 
 @cli.command()
@@ -254,7 +256,7 @@ def stop(timetracker, cancel):
     timetracker.save()
 
 
-@cli.command()
+@cli.command(hidden=True)
 @click.option('-p', '--project', is_flag=True,
               help="only output project")
 @click.option('-t', '--tags', is_flag=True,
