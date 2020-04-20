@@ -14,9 +14,6 @@ import arrow
 import pytest
 
 from tt import TimeTracker, TimeTrackerError
-from tt.timetracker import ConfigParser, ConfigurationError
-
-from . import mock_read
 
 
 @pytest.fixture
@@ -90,18 +87,17 @@ def test_current_timetracker_non_valid_json(mocker, timetracker):
         timetracker.current
 
 
-def test_current_with_given_state(config_dir, mocker):
+def test_current_with_given_state(config, mocker):
     content = json.dumps({'project': 'foo', 'start': 4000})
-    timetracker = TimeTracker(current={'project': 'bar', 'start': 4000},
-                              config_dir=config_dir)
+    timetracker = TimeTracker(config, current={'project': 'bar', 'start': 4000})
 
     mocker.patch('builtins.open', mocker.mock_open(read_data=content))
     assert timetracker.current['project'] == 'bar'
 
 
-def test_current_with_empty_given_state(config_dir, mocker):
+def test_current_with_empty_given_state(config, mocker):
     content = json.dumps({'project': 'foo', 'start': 4000})
-    timetracker = TimeTracker(current=[], config_dir=config_dir)
+    timetracker = TimeTracker(config, current=[])
 
     mocker.patch('builtins.open', mocker.mock_open(read_data=content))
     assert timetracker.current == {}
@@ -151,10 +147,9 @@ def test_frames_timetracker(mocker, timetracker):
         timetracker.frames
 
 
-def test_given_frames(config_dir, mocker):
+def test_given_frames(config, mocker):
     content = json.dumps([[4000, 4010, 'foo', None, ['A']]])
-    timetracker = TimeTracker(frames=[[4000, 4010, 'bar', None, ['A', 'B']]],
-                              config_dir=config_dir)
+    timetracker = TimeTracker(config, frames=[[4000, 4010, 'bar', None, ['A', 'B']]])
 
     mocker.patch('builtins.open', mocker.mock_open(read_data=content))
     assert len(timetracker.frames) == 1
@@ -162,33 +157,12 @@ def test_given_frames(config_dir, mocker):
     assert timetracker.frames[0].tags == ['A', 'B']
 
 
-def test_frames_with_empty_given_state(config_dir, mocker):
+def test_frames_with_empty_given_state(config, mocker):
     content = json.dumps([[0, 10, 'foo', None, ['A']]])
-    timetracker = TimeTracker(frames=[], config_dir=config_dir)
+    timetracker = TimeTracker(config, frames=[])
 
     mocker.patch('builtins.open', mocker.mock_open(read_data=content))
     assert len(timetracker.frames) == 0
-
-
-# config
-
-def test_empty_config_dir():
-    timetracker = TimeTracker()
-    assert timetracker._dir == ''
-
-
-def test_wrong_config(mocker, timetracker):
-    content = """
-toto
-    """
-    mocker.patch.object(ConfigParser, 'read', mock_read(content))
-    with pytest.raises(ConfigurationError):
-        timetracker.config
-
-
-def test_empty_config(mocker, timetracker):
-    mocker.patch.object(ConfigParser, 'read', mock_read(''))
-    assert len(timetracker.config.sections()) == 0
 
 
 # start
@@ -224,24 +198,22 @@ def test_start_two_projects(timetracker):
     assert timetracker.is_started is True
 
 
-def test_start_default_tags(mocker, timetracker):
+def test_start_default_tags(timetracker):
     content = """
 [default_tags]
 my project = A B
     """
-
-    mocker.patch.object(ConfigParser, 'read', mock_read(content))
+    timetracker.config.reload(content)
     timetracker.start('my project')
     assert timetracker.current['tags'] == ['A', 'B']
 
 
-def test_start_default_tags_with_supplementary_input_tags(mocker, timetracker):
+def test_start_default_tags_with_supplementary_input_tags(timetracker):
     content = """
 [default_tags]
 my project = A B
     """
-
-    mocker.patch.object(ConfigParser, 'read', mock_read(content))
+    timetracker.config.reload(content)
     timetracker.start('my project', tags=['C', 'D'])
     assert timetracker.current['tags'] == ['C', 'D', 'A', 'B']
 
@@ -341,8 +313,8 @@ def test_save_current_without_tags(mocker, timetracker, json_mock):
     assert dump_args['ensure_ascii'] is False
 
 
-def test_save_empty_current(config_dir, mocker, json_mock):
-    timetracker = TimeTracker(current={}, config_dir=config_dir)
+def test_save_empty_current(config, mocker, json_mock):
+    timetracker = TimeTracker(config, current={})
 
     mocker.patch('builtins.open', mocker.mock_open())
 
@@ -361,9 +333,8 @@ def test_save_empty_current(config_dir, mocker, json_mock):
     assert result == {}
 
 
-def test_save_frames_no_change(config_dir, mocker, json_mock):
-    timetracker = TimeTracker(frames=[[4000, 4010, 'foo', None]],
-                              config_dir=config_dir)
+def test_save_frames_no_change(config, mocker, json_mock):
+    timetracker = TimeTracker(config, frames=[[4000, 4010, 'foo', None]])
 
     mocker.patch('builtins.open', mocker.mock_open())
     timetracker.save()
@@ -371,9 +342,8 @@ def test_save_frames_no_change(config_dir, mocker, json_mock):
     assert not json_mock.called
 
 
-def test_save_added_frame(config_dir, mocker, json_mock):
-    timetracker = TimeTracker(
-        frames=[[4000, 4010, 'foo', None]], config_dir=config_dir)
+def test_save_added_frame(config, mocker, json_mock):
+    timetracker = TimeTracker(config, frames=[[4000, 4010, 'foo', None]])
     timetracker.frames.add('bar', 4010, 4020, ['A'])
 
     mocker.patch('builtins.open', mocker.mock_open())
@@ -388,9 +358,8 @@ def test_save_added_frame(config_dir, mocker, json_mock):
     assert result[1][4] == ['A']
 
 
-def test_save_changed_frame(config_dir, mocker, json_mock):
-    timetracker = TimeTracker(frames=[[4000, 4010, 'foo', None, ['A']]],
-                              config_dir=config_dir)
+def test_save_changed_frame(config, mocker, json_mock):
+    timetracker = TimeTracker(config, frames=[[4000, 4010, 'foo', None, ['A']]])
     timetracker.frames[0] = ('bar', 4000, 4010, ['A', 'B'])
 
     mocker.patch('builtins.open', mocker.mock_open())
@@ -406,25 +375,8 @@ def test_save_changed_frame(config_dir, mocker, json_mock):
     assert dump_args['ensure_ascii'] is False
 
 
-def test_save_config_no_changes(mocker, timetracker):
-    mocker.patch('builtins.open', mocker.mock_open())
-    write_mock = mocker.patch.object(ConfigParser, 'write')
-    timetracker.save()
-
-    assert not write_mock.called
-
-
-def test_save_config(mocker, timetracker):
-    mocker.patch('builtins.open', mocker.mock_open())
-    write_mock = mocker.patch.object(ConfigParser, 'write')
-    timetracker.config = ConfigParser()
-    timetracker.save()
-
-    assert write_mock.call_count == 1
-
-
-def test_timetracker_save_calls_safe_save(mocker, config_dir, timetracker):
-    frames_file = os.path.join(config_dir, 'frames')
+def test_timetracker_save_calls_safe_save(timetracker, mocker):
+    frames_file = os.path.join(timetracker.config.config_dir, 'frames')
     timetracker.start('foo', tags=['A', 'B'])
     timetracker.stop()
 

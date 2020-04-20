@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 from functools import wraps
+from .config import create_configuration
 from .cli_utils import create_timetracker, parse_tags
 
 
@@ -17,7 +18,7 @@ def patch_click_ctx_object(func):
         elif 'ctx' in kwargs:
             ctx = kwargs['ctx']
         if ctx.obj is None:
-            ctx.obj = create_timetracker()
+            ctx.obj = create_timetracker(create_configuration())
         return func(*args, **kwargs)
     return wrapper
 

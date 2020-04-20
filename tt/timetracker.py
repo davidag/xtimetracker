@@ -8,28 +8,21 @@ import datetime
 import json
 import operator
 import os
-import configparser
 import arrow
 from collections import defaultdict
 from functools import reduce
 
-from .config import ConfigParser
 from .file_utils import safe_save
-from .utils import deduplicate, sorted_groupby
+from .utils import deduplicate, sorted_groupby, TimeTrackerError
 from .frames import Frames, Span
 
 
-class TimeTrackerError(RuntimeError):
-    pass
-
-
-class ConfigurationError(configparser.Error, TimeTrackerError):
-    pass
-
-
 class TimeTracker:
-    def __init__(self, **kwargs):
+    def __init__(self, config, **kwargs):
         """
+        :param config: Configuration object to use.
+        :type config: _ConfigParser
+
         :param frames: If given, should be a list representing the
                         frames.
                         If not given, the value is extracted
@@ -41,21 +34,14 @@ class TimeTracker:
                         If not given, the value is extracted
                         from the state file.
         :type current: dict
-
-        :param config_dir: If given, the directory where the configuration
-                           files will be
         """
         self._current = None
         self._old_state = None
         self._frames = None
-        self._config = None
-        self._config_changed = False
+        self.config = config
 
-        self._dir = kwargs.pop('config_dir', '')
-
-        self.config_file = os.path.join(self._dir, 'config')
-        self.frames_file = os.path.join(self._dir, 'frames')
-        self.state_file = os.path.join(self._dir, 'state')
+        self.frames_file = os.path.join(self.config.config_dir, 'frames')
+        self.state_file = os.path.join(self.config.config_dir, 'state')
 
         if 'frames' in kwargs:
             self.frames = kwargs['frames']
@@ -113,38 +99,11 @@ class TimeTracker:
             f.write(dump)
         return writer
 
-    @property
-    def config(self):
-        """
-        Return TimeTracker's config as a ConfigParser object.
-        """
-        if not self._config:
-            try:
-                config = ConfigParser()
-                config.read(self.config_file)
-            except configparser.Error as e:
-                raise ConfigurationError(
-                    "Cannot parse config file: {}".format(e))
-
-            self._config = config
-
-        return self._config
-
-    @config.setter
-    def config(self, value):
-        """
-        Set a ConfigParser object as the current configuration.
-        """
-        self._config = value
-        self._config_changed = True
-
     def save(self):
         """
         Save the state in the appropriate files. Create them if necessary.
         """
         try:
-            os.makedirs(self._dir, exist_ok=True)
-
             if self._current is not None and self._old_state != self._current:
                 if self.is_started:
                     current = {
@@ -162,9 +121,6 @@ class TimeTracker:
             if self._frames is not None and self._frames.changed:
                 safe_save(self.frames_file,
                           TimeTracker._make_json_writer(self.frames.dump))
-
-            if self._config_changed:
-                safe_save(self.config_file, self.config.write)
 
         except OSError as e:
             raise TimeTrackerError(

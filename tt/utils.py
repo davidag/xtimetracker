@@ -7,6 +7,10 @@
 import itertools
 
 
+class TimeTrackerError(RuntimeError):
+    pass
+
+
 def deduplicate(sequence):
     """
     Return a list with all items of the input sequence but duplicates

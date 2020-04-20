@@ -19,6 +19,7 @@ from .autocompletion import (
     get_projects,
     get_tags,
 )
+from .config import create_configuration
 from .file_utils import safe_save
 from .frames import Frame
 from .timetracker import TimeTrackerError
@@ -137,7 +138,8 @@ def cli(ctx):
 
     # This is the main command group, needed by click in order
     # to handle the subcommands
-    ctx.obj = create_timetracker()
+    ctx.obj = create_timetracker(create_configuration())
+
     if ctx.invoked_subcommand is None:
         ctx.invoke(status)
 
@@ -307,6 +309,42 @@ def status(timetracker, project, tags, elapsed):
     ))
 
 
+@cli.command(context_settings={'ignore_unknown_options': True})
+@click.argument('args', nargs=-1,
+                autocompletion=get_project_or_tag_completion)
+@click.option('-f', '--from', 'from_', required=True, type=DateTime,
+              help="Date and time of start of tracked activity")
+@click.option('-t', '--to', required=True, type=DateTime,
+              help="Date and time of end of tracked activity")
+@click.pass_obj
+@catch_timetracker_error
+def add(timetracker, args, from_, to):
+    """
+    Add time to a project with tag(s) that was not tracked live.
+    """
+    project = parse_project(args)
+    if not project:
+        raise click.ClickException("No project given.")
+
+    # Parse all the tags
+    tags = parse_tags(args)
+
+    # add a new frame, call timetracker save to update state files
+    frame = timetracker.add(
+        project=project, tags=tags, from_date=from_, to_date=to)
+
+    click.echo(
+        "Adding project {}{}, started {} and stopped {}. (id: {})".format(
+            style('project', frame.project),
+            (" " if frame.tags else "") + style('tags', frame.tags),
+            style('time', frame.start.humanize()),
+            style('time', frame.stop.humanize()),
+            style('short_id', frame.id)
+        )
+    )
+    timetracker.save()
+
+
 _SHORTCUT_OPTIONS = ['full', 'year', 'month', 'week', 'day']
 _SHORTCUT_OPTIONS_VALUES = {
     k: get_start_time_for_period(k) for k in _SHORTCUT_OPTIONS
@@ -381,7 +419,6 @@ def report(timetracker, current, from_, to, projects, exclude_projects, tags,
 
     By default, the time spent the last 7 days is printed.
     """
-
     # if the report is an aggregate report, add whitespace using this
     # aggregate tab which will be prepended to the project name
     if aggregated:
@@ -405,8 +442,7 @@ def report(timetracker, current, from_, to, projects, exclude_projects, tags,
 
     lines = []
     # use the pager, or print directly to the terminal
-    if pager or (pager is None and
-                 timetracker.config.getboolean('options', 'pager', True)):
+    if pager or (pager is None and timetracker.config.getboolean('options', 'pager', True)):
 
         def _print(line):
             lines.append(line)
@@ -570,8 +606,7 @@ def aggregate(ctx, timetracker, current, from_, to, projects, exclude_projects,
         click.echo(build_json(lines))
     elif 'csv' in output_format:
         click.echo(build_csv(lines))
-    elif pager or (pager is None and
-                   timetracker.config.getboolean('options', 'pager', True)):
+    elif pager or (pager is None and timetracker.config.getboolean('options', 'pager', True)):
         click.echo_via_pager('\n\n'.join(lines))
     else:
         click.echo('\n\n'.join(lines))
@@ -641,7 +676,7 @@ def log(timetracker, current, from_, to, projects, exclude_projects, tags,
     Display each recorded session during the given timespan.
 
     By default, the sessions from the last 7 days are printed.
-    """  # noqa
+    """
     filtered_frames = timetracker.log(
         from_,
         to,
@@ -672,8 +707,7 @@ def log(timetracker, current, from_, to, projects, exclude_projects, tags,
 
     lines = []
     # use the pager, or print directly to the terminal
-    if pager or (pager is None and
-                 timetracker.config.getboolean('options', 'pager', True)):
+    if pager or (pager is None and timetracker.config.getboolean('options', 'pager', True)):
 
         def _print(line):
             lines.append(line)
@@ -723,42 +757,6 @@ def log(timetracker, current, from_, to, projects, exclude_projects, tags,
         ))
 
     _final_print(lines)
-
-
-@cli.command(context_settings={'ignore_unknown_options': True})
-@click.argument('args', nargs=-1,
-                autocompletion=get_project_or_tag_completion)
-@click.option('-f', '--from', 'from_', required=True, type=DateTime,
-              help="Date and time of start of tracked activity")
-@click.option('-t', '--to', required=True, type=DateTime,
-              help="Date and time of end of tracked activity")
-@click.pass_obj
-@catch_timetracker_error
-def add(timetracker, args, from_, to):
-    """
-    Add time to a project with tag(s) that was not tracked live.
-    """
-    project = parse_project(args)
-    if not project:
-        raise click.ClickException("No project given.")
-
-    # Parse all the tags
-    tags = parse_tags(args)
-
-    # add a new frame, call timetracker save to update state files
-    frame = timetracker.add(
-        project=project, tags=tags, from_date=from_, to_date=to)
-
-    click.echo(
-        "Adding project {}{}, started {} and stopped {}. (id: {})".format(
-            style('project', frame.project),
-            (" " if frame.tags else "") + style('tags', frame.tags),
-            style('time', frame.start.humanize()),
-            style('time', frame.stop.humanize()),
-            style('short_id', frame.id)
-        )
-    )
-    timetracker.save()
 
 
 @cli.command(context_settings={'ignore_unknown_options': True})
@@ -884,9 +882,10 @@ def edit(timetracker, id):
 @click.argument('value', required=False)
 @click.option('-e', '--edit', is_flag=True,
               help="Edit the configuration file with an editor.")
+@click.pass_obj
 @click.pass_context
 @catch_timetracker_error
-def config(context, key, value, edit):
+def config(ctx, timetracker, key, value, edit):
     """
     Get and set configuration options.
 
@@ -902,55 +901,44 @@ def config(context, key, value, edit):
     $ tt config options.include_current
     true
     """
-    timetracker = context.obj
-    wconfig = timetracker.config
+    config = timetracker.config
 
     if edit:
         try:
-            with open(timetracker.config_file) as fp:
+            with open(config.config_file) as fp:
                 rawconfig = fp.read()
         except (IOError, OSError):
             rawconfig = ''
 
         newconfig = click.edit(text=rawconfig, extension='.ini')
-
         if newconfig:
-            safe_save(timetracker.config_file, newconfig)
+            config.reload(newconfig)
+            safe_save(config.config_file, config.write)
+    else:
+        if not key:
+            click.echo(ctx.get_help())
+            return
 
         try:
-            timetracker.config = None
-            timetracker.config  # triggers reloading config from file
-        except timetracker.ConfigurationError as exc:
-            timetracker.config = wconfig
-            timetracker.save()
-            raise click.ClickException(style('error', str(exc)))
-        return
-
-    if not key:
-        click.echo(context.get_help())
-        return
-
-    try:
-        section, option = key.split('.')
-    except ValueError:
-        raise click.ClickException(
-            "The key must have the format 'section.option'"
-        )
-
-    if value is None:
-        if not wconfig.has_section(section):
-            raise click.ClickException("No such section {}".format(section))
-
-        if not wconfig.has_option(section, option):
+            section, option = key.split('.')
+        except ValueError:
             raise click.ClickException(
-                "No such option {} in {}".format(option, section)
+                "The key must have the format 'section.option'"
             )
 
-        click.echo(wconfig.get(section, option))
-    else:
-        if not wconfig.has_section(section):
-            wconfig.add_section(section)
+        if value is None:
+            if not config.has_section(section):
+                raise click.ClickException("No such section {}".format(section))
 
-        wconfig.set(section, option, value)
-        timetracker.config = wconfig
-        timetracker.save()
+            if not config.has_option(section, option):
+                raise click.ClickException(
+                    "No such option {} in {}".format(option, section)
+                )
+
+            click.echo(config.get(section, option))
+        else:
+            if not config.has_section(section):
+                config.add_section(section)
+
+            config.set(section, option, value)
+            safe_save(config.config_file, config.write)

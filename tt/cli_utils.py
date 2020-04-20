@@ -20,9 +20,8 @@ from click.exceptions import UsageError
 from .timetracker import TimeTracker
 
 
-def create_timetracker():
-    config_dir = os.environ.get('TT_DIR', click.get_app_dir('tt'))
-    return TimeTracker(config_dir=config_dir)
+def create_timetracker(config):
+    return TimeTracker(config=config)
 
 
 def style(name, element):
