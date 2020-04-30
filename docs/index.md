@@ -23,7 +23,7 @@ using the existing `setup.py` script.
 ```bash
 $ git clone https://gitlab.com/davidalfonso/tt.git
 $ cd tt/
-$ python setup.py install
+$ pip install -e .
 ```
 
 ### Command line completion
