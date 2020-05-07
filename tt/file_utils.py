@@ -8,6 +8,12 @@ import shutil
 import tempfile
 import os
 
+from .utils import TimeTrackerError
+
+
+class FileIOError(TimeTrackerError):
+    pass
+
 
 def safe_save(path, content, ext='.bak'):
     """
@@ -27,18 +33,25 @@ def safe_save(path, content, ext='.bak'):
     """
     tmpfp = tempfile.NamedTemporaryFile(mode='w+', delete=False)
     try:
-        with tmpfp:
+        with tmpfp as fp:
             if isinstance(content, str):
-                tmpfp.write(content)
+                fp.write(content)
             else:
-                content(tmpfp)
-    except Exception:
+                content(fp)
+    except Exception as e:
         try:
             os.unlink(tmpfp.name)
         except (IOError, OSError):
             pass
-        raise
+        raise FileIOError("Error writing file '{}': {}".format(tmpfp.name, e))
     else:
+        dirname = os.path.dirname(path)
+        try:
+            if not os.path.exists(dirname):
+                os.makedirs(dirname)
+        except (IOError, OSError) as e:
+            raise FileIOError("Error creating directory '{}': {}".format(dirname, e))
+
         if os.path.exists(path):
             try:
                 os.unlink(path + ext)

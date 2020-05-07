@@ -8,19 +8,54 @@
 
 import pytest
 
-from tt.config import ConfigParser
-
-from . import mock_read
+from tt.config import create_configuration, ConfigurationError
 
 
-def test_config_get(mocker, timetracker):
+def test_config_dir(config):
+    assert 'pytest-' in config.config_dir
+
+
+def test_config_wrong():
+    content = """
+toto
+    """
+    with pytest.raises(ConfigurationError):
+        create_configuration(content)
+
+
+def test_config_empty():
+    config = create_configuration('')
+    assert len(config.sections()) == 0
+
+
+def test_config_reload_from_string(config):
     content = """
 [section]
 option1 = foo
 other_option =
     """
-    mocker.patch.object(ConfigParser, 'read', mock_read(content))
-    config = timetracker.config
+    config.reload(content)
+    assert config.get('section', 'option1') == 'foo'
+    assert config.get('section', 'other_option') == ''
+    content = """
+[other_section]
+option2 = foo
+other_option = bar
+    """
+    config.reload(content)
+    assert config.get('section', 'option1') is None
+    assert config.get('section', 'other_option') is None
+    assert config.get('other_section', 'option2') == 'foo'
+    assert config.get('other_section', 'other_option') == 'bar'
+
+
+def test_config_get():
+    content = """
+[section]
+option1 = foo
+other_option =
+    """
+    config = create_configuration(content)
     assert config.get('section', 'option1') == 'foo'
     assert config.get('section', 'other_option') == ''
     assert config.get('section', 'foo') is None
@@ -29,7 +64,7 @@ other_option =
     assert config.get('option', 'spamm', 'eggs') == 'eggs'
 
 
-def test_config_getboolean(mocker, timetracker):
+def test_config_getboolean():
     content = """
 [options]
 flag1 = 1
@@ -39,8 +74,7 @@ flag4 = yes
 flag5 = false
 flag6 =
     """
-    mocker.patch.object(ConfigParser, 'read', mock_read(content))
-    config = timetracker.config
+    config = create_configuration(content)
     assert config.getboolean('options', 'flag1') is True
     assert config.getboolean('options', 'flag1', False) is True
     assert config.getboolean('options', 'flag2') is True
@@ -53,15 +87,14 @@ flag6 =
     assert config.getboolean('options', 'missing', True) is True
 
 
-def test_config_getint(mocker, timetracker):
+def test_config_getint():
     content = """
 [options]
 value1 = 42
 value2 = spamm
 value3 =
     """
-    mocker.patch.object(ConfigParser, 'read', mock_read(content))
-    config = timetracker.config
+    config = create_configuration(content)
     assert config.getint('options', 'value1') == 42
     assert config.getint('options', 'value1', 666) == 42
     assert config.getint('options', 'missing') is None
@@ -77,7 +110,7 @@ value3 =
         config.getint('options', 'value3')
 
 
-def test_config_getfloat(mocker, timetracker):
+def test_config_getfloat():
     content = """
 [options]
 value1 = 3.14
@@ -85,9 +118,7 @@ value2 = 42
 value3 = spamm
 value4 =
     """
-
-    mocker.patch.object(ConfigParser, 'read', mock_read(content))
-    config = timetracker.config
+    config = create_configuration(content)
     assert config.getfloat('options', 'value1') == 3.14
     assert config.getfloat('options', 'value1', 6.66) == 3.14
     assert config.getfloat('options', 'value2') == 42.0
@@ -104,7 +135,7 @@ value4 =
         config.getfloat('options', 'value4')
 
 
-def test_config_getlist(mocker, timetracker):
+def test_config_getlist():
     content = """
 # empty lines in option values (including the first one) are discarded
 [options]
@@ -127,33 +158,28 @@ value5 = one
    two #three
    four # five
 """
-    mocker.patch.object(ConfigParser, 'read', mock_read(content))
-    gl = timetracker.config.getlist
-    assert gl('options', 'value1') == ['one', 'two three', 'four',
-                                       'five six']
-    assert gl('options', 'value2') == ['one', 'two three', 'four',
-                                       'five  six']
-    assert gl('options', 'value3') == ['one', 'two  three']
-    assert gl('options', 'value4') == ['one', 'two three', 'four']
-    assert gl('options', 'value5') == ['one', 'two #three', 'four # five']
+    config = create_configuration(content)
+    assert config.getlist('options', 'value1') == ['one', 'two three', 'four', 'five six']
+    assert config.getlist('options', 'value2') == ['one', 'two three', 'four', 'five  six']
+    assert config.getlist('options', 'value3') == ['one', 'two  three']
+    assert config.getlist('options', 'value4') == ['one', 'two three', 'four']
+    assert config.getlist('options', 'value5') == ['one', 'two #three', 'four # five']
 
     # default values
-    assert gl('options', 'novalue') == []
-    assert gl('options', 'novalue', None) == []
-    assert gl('options', 'novalue', 42) == 42
-    assert gl('nosection', 'dummy') == []
-    assert gl('nosection', 'dummy', None) == []
-    assert gl('nosection', 'dummy', 42) == 42
+    assert config.getlist('options', 'novalue') == []
+    assert config.getlist('options', 'novalue', None) == []
+    assert config.getlist('options', 'novalue', 42) == 42
+    assert config.getlist('nosection', 'dummy') == []
+    assert config.getlist('nosection', 'dummy', None) == []
+    assert config.getlist('nosection', 'dummy', 42) == 42
 
-    default = gl('nosection', 'dummy')
+    default = config.getlist('nosection', 'dummy')
     default.append(42)
-    assert gl('nosection', 'dummy') != [42], (
+    assert config.getlist('nosection', 'dummy') != [42], (
         "Modifying default return value should not have side effect.")
 
 
-def test_set_config(timetracker):
-    config = ConfigParser()
+def test_config_set():
+    config = create_configuration()
     config.set('foo', 'bar', 'lol')
-    timetracker.config = config
-
-    assert timetracker.config.get('foo', 'bar') == 'lol'
+    assert config.get('foo', 'bar') == 'lol'

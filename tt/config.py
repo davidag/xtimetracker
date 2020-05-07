@@ -4,26 +4,53 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
 
-"""A convenience and compatibility wrapper for RawConfigParser."""
-
+"""A convenience and compatibility wrapper for ConfigParser."""
+import os
 import shlex
-from configparser import RawConfigParser
+import configparser
 
-__all__ = ('ConfigParser',)
+from click import get_app_dir
+
+from .utils import TimeTrackerError
 
 
-class ConfigParser(RawConfigParser):
-    """A simple wrapper for RawConfigParser to make options access easier."""
+class ConfigurationError(configparser.Error, TimeTrackerError):
+    pass
+
+
+class _ConfigParser(configparser.ConfigParser):
+    """A simple wrapper for ConfigParser to make options access easier."""
+
+    def __init__(self, config_dir=None, **kwargs):
+        if config_dir is None:
+            self.config_dir = os.environ.get('TT_DIR', get_app_dir('tt'))
+        else:
+            self.config_dir = config_dir
+        self.config_file = os.path.join(self.config_dir, 'config')
+        super().__init__(**kwargs)
+
+    def reload(self, contents=None):
+        """
+        Reloads the configuration from a file or string.
+        """
+        for section in self.sections():
+            self.remove_section(section)
+
+        try:
+            if contents is not None:
+                self.read_string(contents)
+            else:
+                self.read(self.config_file)
+        except configparser.Error as e:
+            raise ConfigurationError("Cannot parse config: {}".format(e))
 
     def get(self, section, option, default=None, **kwargs):
         """
         Return value of option in given configuration section as a string.
 
         If option is not set, return default instead (defaults to None).
-
         """
-        return (RawConfigParser.get(self, section, option, **kwargs)
-                if self.has_option(section, option) else default)
+        return super().get(section, option, fallback=default, **kwargs)
 
     def getint(self, section, option, default=None):
         """
@@ -32,7 +59,6 @@ class ConfigParser(RawConfigParser):
         If option is not set, return default (defaults to None).
 
         Raises ValueError if the value cannot be converted to an integer.
-
         """
         val = self.get(section, option)
         return default if val is None else int(val)
@@ -58,7 +84,6 @@ class ConfigParser(RawConfigParser):
         case-insensitive. All other values are considered false.
 
         If option is not set or empty, return default (defaults to False).
-
         """
         val = self.get(section, option)
         return val.lower() in ('1', 'on', 'true', 'yes') if val else default
@@ -87,7 +112,6 @@ class ConfigParser(RawConfigParser):
                 four
                 five six
             option1 = one  "two three" four 'five  six'
-
         """
         if not self.has_option(section, option):
             return [] if default is None else default
@@ -105,9 +129,14 @@ class ConfigParser(RawConfigParser):
         Set option in given configuration section to value.
 
         If section does not exist yet, it is added implicitly.
-
         """
         if not self.has_section(section):
             self.add_section(section)
 
-        RawConfigParser.set(self, section, option, value)
+        super().set(section, option, value)
+
+
+def create_configuration(contents=None, config_dir=None):
+    c = _ConfigParser(config_dir=config_dir, interpolation=None)
+    c.reload(contents)
+    return c

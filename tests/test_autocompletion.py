@@ -16,8 +16,6 @@ from tt.autocompletion import (
     get_frames,
     get_project_or_tag_completion,
     get_projects,
-    get_rename_name,
-    get_rename_types,
     get_tags,
 )
 
@@ -37,22 +35,19 @@ ClickContext = Namespace
 
 @pytest.mark.datafiles(AUTOCOMPLETION_FRAMES_PATH)
 @pytest.mark.parametrize(
-    "func_to_test, rename_type, args",
+    "func_to_test, args",
     [
-        (get_frames, None, []),
-        (get_project_or_tag_completion, None, ["project1", "+tag1"]),
-        (get_project_or_tag_completion, None, []),
-        (get_projects, None, []),
-        (get_rename_name, "project", []),
-        (get_rename_name, "tag", []),
-        (get_rename_types, None, []),
-        (get_tags, None, []),
+        (get_frames, []),
+        (get_project_or_tag_completion, ["project1", "+tag1"]),
+        (get_project_or_tag_completion, []),
+        (get_projects, []),
+        (get_tags, []),
     ],
 )
 def test_if_returned_values_are_distinct(
-    timetracker_df, func_to_test, rename_type, args
+    timetracker_df, func_to_test, args
 ):
-    ctx = ClickContext(obj=timetracker_df, params={"rename_type": rename_type})
+    ctx = ClickContext(obj=timetracker_df)
     prefix = ""
     ret_list = list(func_to_test(ctx, args, prefix))
     assert sorted(ret_list) == sorted(set(ret_list))
@@ -60,46 +55,40 @@ def test_if_returned_values_are_distinct(
 
 @pytest.mark.datafiles(AUTOCOMPLETION_FRAMES_PATH)
 @pytest.mark.parametrize(
-    "func_to_test, n_expected_returns, rename_type, args",
+    "func_to_test, n_expected_returns, args",
     [
-        (get_frames, N_FRAMES, None, []),
-        (get_project_or_tag_completion, N_TASKS, None, ["project1", "+"]),
-        (get_project_or_tag_completion, N_PROJECTS, None, []),
-        (get_projects, N_PROJECTS, None, []),
-        (get_rename_name, N_PROJECTS, "project", []),
-        (get_rename_name, N_TASKS, "tag", []),
-        (get_rename_types, 2, None, []),
-        (get_tags, N_TASKS, None, []),
+        (get_frames, N_FRAMES, []),
+        (get_project_or_tag_completion, N_TASKS, ["project1", "+"]),
+        (get_project_or_tag_completion, N_PROJECTS, []),
+        (get_projects, N_PROJECTS, []),
+        (get_tags, N_TASKS, []),
     ],
 )
 def test_if_empty_prefix_returns_everything(
-    timetracker_df, func_to_test, n_expected_returns, rename_type, args
+    timetracker_df, func_to_test, n_expected_returns, args
 ):
     prefix = ""
-    ctx = ClickContext(obj=timetracker_df, params={"rename_type": rename_type})
+    ctx = ClickContext(obj=timetracker_df)
     completed_vals = set(func_to_test(ctx, args, prefix))
     assert len(completed_vals) == n_expected_returns
 
 
 @pytest.mark.datafiles(AUTOCOMPLETION_FRAMES_PATH)
 @pytest.mark.parametrize(
-    "func_to_test, rename_type, args",
+    "func_to_test, args",
     [
-        (get_frames, None, []),
-        (get_project_or_tag_completion, None, ["project1", "+"]),
-        (get_project_or_tag_completion, None, ["project1", "+tag1", "+"]),
-        (get_project_or_tag_completion, None, []),
-        (get_projects, None, []),
-        (get_rename_name, "project", []),
-        (get_rename_name, "tag", []),
-        (get_rename_types, None, []),
-        (get_tags, None, []),
+        (get_frames, []),
+        (get_project_or_tag_completion, ["project1", "+"]),
+        (get_project_or_tag_completion, ["project1", "+tag1", "+"]),
+        (get_project_or_tag_completion, []),
+        (get_projects, []),
+        (get_tags, []),
     ],
 )
 def test_completion_of_nonexisting_prefix(
-    timetracker_df, func_to_test, rename_type, args
+    timetracker_df, func_to_test, args
 ):
-    ctx = ClickContext(obj=timetracker_df, params={"rename_type": rename_type})
+    ctx = ClickContext(obj=timetracker_df)
     prefix = "NOT-EXISTING-PREFIX"
     ret_list = list(func_to_test(ctx, args, prefix))
     assert not ret_list
@@ -107,58 +96,33 @@ def test_completion_of_nonexisting_prefix(
 
 @pytest.mark.datafiles(AUTOCOMPLETION_FRAMES_PATH)
 @pytest.mark.parametrize(
-    "func_to_test, prefix, n_expected_vals, rename_type, args",
+    "func_to_test, prefix, n_expected_vals, args",
     [
-        (get_frames, "f4f7", N_FRAME_IDS_FOR_PREFIX, None, []),
+        (get_frames, "f4f7", N_FRAME_IDS_FOR_PREFIX, []),
         (
             get_project_or_tag_completion,
             "+tag",
             N_TASKS,
-            None,
             ["project1", "+tag3"],
         ),
-        (get_project_or_tag_completion, "+tag", N_TASKS, None, ["project1"]),
+        (get_project_or_tag_completion, "+tag", N_TASKS, ["project1"]),
         (
             get_project_or_tag_completion,
             "project3",
             N_VARIATIONS_OF_PROJECT3,
-            None,
             [],
         ),
-        (get_projects, "project3", N_VARIATIONS_OF_PROJECT3, None, []),
-        (
-            get_rename_name,
-            "project3",
-            N_VARIATIONS_OF_PROJECT3,
-            "project",
-            [],
-        ),
-        (get_rename_name, "tag", N_TASKS, "tag", []),
-        (get_rename_types, "ta", 1, None, []),
-        (get_tags, "tag", N_TASKS, None, []),
+        (get_projects, "project3", N_VARIATIONS_OF_PROJECT3, []),
+        (get_tags, "tag", N_TASKS, []),
     ],
 )
 def test_completion_of_existing_prefix(
-    timetracker_df, func_to_test, prefix, n_expected_vals, rename_type, args
+    timetracker_df, func_to_test, prefix, n_expected_vals, args
 ):
-    ctx = ClickContext(obj=timetracker_df, params={"rename_type": rename_type})
+    ctx = ClickContext(obj=timetracker_df)
     ret_set = set(func_to_test(ctx, args, prefix))
     assert len(ret_set) == n_expected_vals
     assert all(cur_elem.startswith(prefix) for cur_elem in ret_set)
-
-
-@pytest.mark.datafiles(AUTOCOMPLETION_FRAMES_PATH)
-@pytest.mark.parametrize(
-    "func_to_test, prefix, expected_vals",
-    [
-        (get_rename_types, "", ["project", "tag"]),
-        (get_rename_types, "t", ["tag"]),
-        (get_rename_types, "p", ["project"]),
-    ],
-)
-def test_for_known_completion_values(func_to_test, prefix, expected_vals):
-    ret_list = list(func_to_test(None, [], prefix))
-    assert ret_list == expected_vals
 
 
 @pytest.mark.parametrize("func", [

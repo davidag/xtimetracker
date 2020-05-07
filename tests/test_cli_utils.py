@@ -15,20 +15,17 @@ import datetime
 import os
 import pytest
 from io import StringIO
-from unittest.mock import patch
-from click.exceptions import Abort
 from dateutil.tz import tzutc
 
 from tt.cli_utils import (
     apply_weekday_offset,
     build_csv,
-    confirm_project,
-    confirm_tags,
     flatten_report_for_csv,
     frames_to_csv,
     frames_to_json,
     get_start_time_for_period,
     get_last_frame_from_project,
+    parse_project,
     parse_tags,
     json_encoder,
 )
@@ -74,6 +71,21 @@ def test_apply_weekday_offset(monday_start, week_start, new_start):
         assert apply_weekday_offset(original_start, week_start) == result
 
 
+# parse_project
+
+@pytest.mark.parametrize('args, parsed_project', [
+    (['+ham', '+n', '+eggs'], ''),
+    (['ham', 'n', '+eggs'], 'ham n'),
+    (['ham', '+n', 'eggs'], 'ham'),
+    (['ham', 'jelly', 'eggs', '+food'], 'ham jelly eggs'),
+])
+def test_parse_project(args, parsed_project):
+    project = parse_project(args)
+    assert project == parsed_project
+
+
+# parse_tags
+
 @pytest.mark.parametrize('args, parsed_tags', [
     (['+ham', '+n', '+eggs'], ['ham', 'n', 'eggs']),
     (['+ham', 'n', '+eggs'], ['ham n', 'eggs']),
@@ -84,48 +96,6 @@ def test_apply_weekday_offset(monday_start, week_start, new_start):
 def test_parse_tags(args, parsed_tags):
     tags = parse_tags(args)
     assert tags == parsed_tags
-
-
-def test_confirm_project_existing_project_returns_true():
-    project = 'foo'
-    timetracker_projects = ['foo', 'bar']
-    assert confirm_project(project, timetracker_projects)
-
-
-@patch('click.confirm', return_value=True)
-def test_confirm_project_accept_returns_true(confirm):
-    project = 'baz'
-    timetracker_projects = ['foo', 'bar']
-    assert confirm_project(project, timetracker_projects)
-
-
-@patch('tt.cli_utils.click.confirm', side_effect=Abort)
-def test_confirm_project_reject_raises_abort(confirm):
-    project = 'baz'
-    timetracker_projects = ['foo', 'bar']
-    with pytest.raises(Abort):
-        confirm_project(project, timetracker_projects)
-
-
-def test_confirm_tags_existing_tag_returns_true():
-    tags = ['a']
-    timetracker_tags = ['a', 'b']
-    assert confirm_tags(tags, timetracker_tags)
-
-
-@patch('click.confirm', return_value=True)
-def test_confirm_tags_accept_returns_true(confirm):
-    tags = ['c']
-    timetracker_tags = ['a', 'b']
-    assert confirm_tags(tags, timetracker_tags)
-
-
-@patch('click.confirm', side_effect=Abort)
-def test_confirm_tags_reject_raises_abort(confirm):
-    tags = ['c']
-    timetracker_tags = ['a', 'b']
-    with pytest.raises(Abort):
-        confirm_project(tags[0], timetracker_tags)
 
 
 # build_csv

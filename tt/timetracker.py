@@ -8,28 +8,21 @@ import datetime
 import json
 import operator
 import os
-import configparser
 import arrow
 from collections import defaultdict
 from functools import reduce
 
-from .config import ConfigParser
 from .file_utils import safe_save
-from .utils import deduplicate, sorted_groupby
+from .utils import deduplicate, sorted_groupby, TimeTrackerError
 from .frames import Frames, Span
 
 
-class TimeTrackerError(RuntimeError):
-    pass
-
-
-class ConfigurationError(configparser.Error, TimeTrackerError):
-    pass
-
-
 class TimeTracker:
-    def __init__(self, **kwargs):
+    def __init__(self, config, **kwargs):
         """
+        :param config: Configuration object to use.
+        :type config: _ConfigParser
+
         :param frames: If given, should be a list representing the
                         frames.
                         If not given, the value is extracted
@@ -41,21 +34,14 @@ class TimeTracker:
                         If not given, the value is extracted
                         from the state file.
         :type current: dict
-
-        :param config_dir: If given, the directory where the configuration
-                           files will be
         """
         self._current = None
         self._old_state = None
         self._frames = None
-        self._config = None
-        self._config_changed = False
+        self.config = config
 
-        self._dir = kwargs.pop('config_dir', '')
-
-        self.config_file = os.path.join(self._dir, 'config')
-        self.frames_file = os.path.join(self._dir, 'frames')
-        self.state_file = os.path.join(self._dir, 'state')
+        self.frames_file = os.path.join(self.config.config_dir, 'frames')
+        self.state_file = os.path.join(self.config.config_dir, 'state')
 
         if 'frames' in kwargs:
             self.frames = kwargs['frames']
@@ -113,38 +99,11 @@ class TimeTracker:
             f.write(dump)
         return writer
 
-    @property
-    def config(self):
-        """
-        Return TimeTracker's config as a ConfigParser object.
-        """
-        if not self._config:
-            try:
-                config = ConfigParser()
-                config.read(self.config_file)
-            except configparser.Error as e:
-                raise ConfigurationError(
-                    "Cannot parse config file: {}".format(e))
-
-            self._config = config
-
-        return self._config
-
-    @config.setter
-    def config(self, value):
-        """
-        Set a ConfigParser object as the current configuration.
-        """
-        self._config = value
-        self._config_changed = True
-
     def save(self):
         """
         Save the state in the appropriate files. Create them if necessary.
         """
         try:
-            os.makedirs(self._dir, exist_ok=True)
-
             if self._current is not None and self._old_state != self._current:
                 if self.is_started:
                     current = {
@@ -162,9 +121,6 @@ class TimeTracker:
             if self._frames is not None and self._frames.changed:
                 safe_save(self.frames_file,
                           TimeTracker._make_json_writer(self.frames.dump))
-
-            if self._config_changed:
-                safe_save(self.config_file, self.config.write)
 
         except OSError as e:
             raise TimeTrackerError(
@@ -238,7 +194,7 @@ class TimeTracker:
         frame = self.frames.add(project, from_date, to_date, tags=tags)
         return frame
 
-    def start(self, project, tags=None, gap=True):
+    def start(self, project, tags=None, stretch=False):
         assert not self.is_started
         default_tags = self.config.getlist('default_tags', project)
         tags = (tags or []) + default_tags
@@ -246,41 +202,28 @@ class TimeTracker:
             'project': project,
             'tags': deduplicate(tags)
         }
-        if not gap:
-            stop_of_prev_frame = self.frames[-1].stop
-            new_frame['start'] = stop_of_prev_frame
+        if stretch and len(self.frames) > 0:
+            max_elapsed = self.config.getint('options', 'autostretch_max_elapsed_secs', 28800)
+            if arrow.now().timestamp - self.frames[-1].stop.timestamp < max_elapsed:
+                new_frame['start'] = self.frames[-1].stop
         self.current = new_frame
         return self.current
 
-    def stop(self, stop_at=None):
+    def stop(self):
         if not self.is_started:
             raise TimeTrackerError("No project started.")
-
-        old = self.current
-
-        if stop_at is None:
-            # One cannot use `arrow.now()` as default argument. Default
-            # arguments are evaluated when a function is defined, not when its
-            # called. Since there might be huge delays between defining this
-            # stop function and calling it, the value of `stop_at` could be
-            # outdated if defined using a default argument.
-            stop_at = arrow.now()
-        if old['start'] > stop_at:
-            raise TimeTrackerError('Task cannot end before it starts.')
-        if stop_at > arrow.now():
-            raise TimeTrackerError('Task cannot end in the future.')
-
         frame = self.frames.add(
-            old['project'], old['start'], stop_at, tags=old['tags']
+            self.current['project'],
+            self.current['start'],
+            arrow.now(),
+            tags=self.current['tags']
         )
         self.current = None
-
         return frame
 
     def cancel(self):
         if not self.is_started:
             raise TimeTrackerError("No project started.")
-
         old_current = self.current
         self.current = None
         return old_current
@@ -441,37 +384,3 @@ class TimeTracker:
 
         report['time'] = total.total_seconds()
         return report
-
-    def rename_project(self, old_project, new_project):
-        """Rename a project in all affected frames."""
-        if old_project not in self.projects():
-            raise TimeTrackerError('Project "%s" does not exist' % old_project)
-
-        updated_at = arrow.utcnow()
-        # rename project
-        for frame in self.frames:
-            if frame.project == old_project:
-                self.frames[frame.id] = frame._replace(
-                    project=new_project,
-                    updated_at=updated_at
-                )
-
-        self.frames.changed = True
-        self.save()
-
-    def rename_tag(self, old_tag, new_tag):
-        """Rename a tag in all affected frames."""
-        if old_tag not in self.tags():
-            raise TimeTrackerError('Tag "%s" does not exist' % old_tag)
-
-        updated_at = arrow.utcnow()
-        # rename tag
-        for frame in self.frames:
-            if old_tag in frame.tags:
-                self.frames[frame.id] = frame._replace(
-                    tags=[new_tag if t == old_tag else t for t in frame.tags],
-                    updated_at=updated_at
-                )
-
-        self.frames.changed = True
-        self.save()

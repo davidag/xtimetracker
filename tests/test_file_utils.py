@@ -13,9 +13,9 @@ import pytest
 from tt.file_utils import safe_save
 
 
-def test_safe_save(config_dir):
-    save_file = os.path.join(config_dir, 'test')
-    backup_file = os.path.join(config_dir, 'test' + '.bak')
+def test_safe_save(config):
+    save_file = os.path.join(config.config_dir, 'test')
+    backup_file = os.path.join(config.config_dir, 'test' + '.bak')
 
     assert not os.path.exists(save_file)
     safe_save(save_file, lambda f: f.write("Success"))
@@ -37,9 +37,9 @@ def test_safe_save(config_dir):
     assert os.path.getmtime(save_file) >= os.path.getmtime(backup_file)
 
 
-def test_safe_save_tmpfile_on_other_filesystem(config_dir, mocker):
-    save_file = os.path.join(config_dir, 'test')
-    backup_file = os.path.join(config_dir, 'test' + '.bak')
+def test_safe_save_tmpfile_on_other_filesystem(config, mocker):
+    save_file = os.path.join(config.config_dir, 'test')
+    backup_file = os.path.join(config.config_dir, 'test' + '.bak')
 
     assert not os.path.exists(save_file)
     safe_save(save_file, lambda f: f.write("Success"))
@@ -59,9 +59,9 @@ def test_safe_save_tmpfile_on_other_filesystem(config_dir, mocker):
         assert fp.read() == "Again"
 
 
-def test_safe_save_with_exception(config_dir):
-    save_file = os.path.join(config_dir, 'test')
-    backup_file = os.path.join(config_dir, 'test' + '.bak')
+def test_safe_save_with_exception(config):
+    save_file = os.path.join(config.config_dir, 'test')
+    backup_file = os.path.join(config.config_dir, 'test' + '.bak')
 
     def failing_writer(f):
         raise RuntimeError("Save failed.")

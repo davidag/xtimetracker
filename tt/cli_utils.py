@@ -12,7 +12,6 @@ import json
 import operator
 import os
 from io import StringIO
-from typing import Iterable
 
 import arrow
 import click
@@ -21,33 +20,8 @@ from click.exceptions import UsageError
 from .timetracker import TimeTracker
 
 
-def create_timetracker():
-    config_dir = os.environ.get('TT_DIR', click.get_app_dir('tt'))
-    return TimeTracker(config_dir=config_dir)
-
-
-def confirm_project(project: str, existing_projects: Iterable):
-    """
-    Ask user to confirm creation of a new project
-    Returns True on accept and raises click.exceptions.Abort on reject
-    """
-    if project not in existing_projects:
-        msg = ("Project '%s' does not exist yet. Create it?"
-               % style('project', project))
-        click.confirm(msg, abort=True)
-    return True
-
-
-def confirm_tags(tags: Iterable, existing_tags: Iterable):
-    """
-    Ask user to confirm creation of new tags (each separately)
-    Returns True if all accepted and raises click.exceptions.Abort on reject
-    """
-    for tag in tags:
-        if tag not in existing_tags:
-            msg = "Tag '%s' does not exist yet. Create it?" % style('tag', tag)
-            click.confirm(msg, abort=True)
-    return True
+def create_timetracker(config):
+    return TimeTracker(config=config)
 
 
 def style(name, element):
@@ -121,6 +95,7 @@ def options(opt_list):
     return value_proc
 
 
+# [refactor] - get_frame_from_argument: put into TT (maybe extending frames()?)
 def get_frame_from_argument(timetracker, arg):
     """
     Get a frame from a command line argument which can either be a
@@ -150,6 +125,7 @@ def get_frame_from_argument(timetracker, arg):
         )
 
 
+# [refactor] - get_last_frame_from_project: uses? demeter? move into timetracker?
 def get_last_frame_from_project(timetracker, project):
     if project not in timetracker.projects():
         return None
@@ -189,6 +165,11 @@ def get_start_time_for_period(period):
     return start_time
 
 
+def is_current_tracking_data(timetracker, project, tags):
+    return (timetracker.current['project'] == project and
+            set(timetracker.current['tags']) == set(tags))
+
+
 def apply_weekday_offset(start_time, week_start):
     """
     Apply the offset required to move the start date `start_time` of a week
@@ -204,6 +185,17 @@ def apply_weekday_offset(start_time, week_start):
     now = datetime.datetime.now()
     offset = weekdays[new_start] - 7 * (weekdays[new_start] > now.weekday())
     return start_time.shift(days=offset)
+
+
+def parse_project(values_list):
+    """
+    Return a string with the project name.
+
+    Concatenate all values until one is a tag (ie. starts with '+').
+    """
+    return ' '.join(
+        itertools.takewhile(lambda s: not s.startswith('+'), values_list)
+    )
 
 
 def parse_tags(values_list):

@@ -75,11 +75,7 @@ function __fish_tt_needs_project -d "check if we need a project"
 end
 
 # ungrouped
-complete -f -c tt -n '__fish_tt_needs_sub' -a cancel -d "Cancel the last start command"
-complete -f -c tt -n '__fish_tt_needs_sub' -a frames -d "Display the list of all frame IDs"
 complete -f -c tt -n '__fish_tt_needs_sub' -a help -d "Display help information"
-complete -f -c tt -n '__fish_tt_needs_sub' -a projects -d "Display the list of projects"
-complete -f -c tt -n '__fish_tt_needs_sub' -a tags -d "Display the list of tags"
 
 # add
 complete -f -c tt -n '__fish_tt_needs_sub' -a add -d "Add time for project with tag(s) that was not tracked live"
@@ -127,15 +123,6 @@ complete -f -c tt -n '__fish_tt_using_command log' -s j -l json -d "output json"
 complete -f -c tt -n '__fish_tt_using_command log' -s s -l csv -d "output csv"
 complete -f -c tt -n '__fish_tt_using_command log' -s g -l pager -d "view through pager"
 complete -f -c tt -n '__fish_tt_using_command log' -s G -l no-pager -d "don't vew through pager"
-
-# remove
-complete -f -c tt -n '__fish_tt_needs_sub' -a remove -d "Remove a frame"
-complete -f -c tt -n '__fish_tt_using_command remove' -a "(__fish_tt_get_frames)"
-complete -f -c tt -n '__fish_tt_using_command remove' -s f -l force -d "silently remove"
-
-# rename
-complete -f -c tt -n '__fish_tt_needs_sub' -a rename -d "Rename a project or tag"
-complete -f -c tt -n '__fish_tt_using_command rename' -a "(__fish_tt_get_projects) (__fish_tt_get_tags)"
 
 # report
 complete -f -c tt -n '__fish_tt_needs_sub' -a report -d "Display a report of time spent"

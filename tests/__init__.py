@@ -9,7 +9,6 @@
 import os
 import datetime
 from unittest import mock
-from io import StringIO
 
 import py
 
@@ -46,7 +45,3 @@ def mock_datetime(dt, dt_module):
     MockedDateTime = DateTimeMeta('datetime', (BaseMockedDateTime,), {})
 
     return mock.patch.object(dt_module, 'datetime', MockedDateTime)
-
-
-def mock_read(content):
-    return lambda self, name: self._read(StringIO(content), name)
