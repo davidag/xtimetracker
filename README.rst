@@ -47,6 +47,13 @@ To list all available commands use:
 License
 -------
 
-tt is released under the MIT License. See the bundled LICENSE file for
-details.
+Copyright (C) 2020 The tt Authors
 
+This work is licensed under multiple licenses.
+
+* All original source code is licensed under GPL-3.0-or-later.
+* All code borrowed from `the Watson project <https://github.com/TailorDev/Watson>`_ is licensed under the MIT license.
+
+SPDX-License-Identifier: GPL-3.0-or-later AND MIT
+
+For more accurate information, you can check the individual files.

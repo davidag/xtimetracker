@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2015-2019 Tailordev
+#
+# SPDX-License-Identifier: MIT
+
 # copy this into ~/.config/fish/completions/ to enable autocomplete for the tt time tracker
 #
 function __fish_tt_needs_sub -d "provides a list of sub commands"

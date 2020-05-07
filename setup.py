@@ -1,12 +1,18 @@
-#!/usr/bin/env python
+# SPDX-FileCopyrightText: 2015-2019 Tailordev
+# SPDX-FileCopyrightText: 2020 The tt Authors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
+
 """Setup file for tt distribution."""
 
 from os.path import join
 
 from setuptools import setup
 
-with open('README.rst') as f:
-    readme = f.read()
+def readme():
+    """Return contents of README.rst"""
+    return open('README.rst').read()
 
 # read package meta-data from version.py
 pkg = {}
@@ -42,8 +48,8 @@ setup(
     packages=['tt'],
     author='David Alfonso',
     author_email='developer@davidalfonso.es',
-    license='MIT',
-    long_description=readme,
+    license='GPL-3.0-or-later AND MIT',
+    long_description=readme(),
     install_requires=parse_requirements('requirements.txt'),
     python_requires='>=3.5',
     tests_require=parse_requirements('requirements-dev.txt'),
@@ -53,13 +59,14 @@ setup(
         ]
     },
     classifiers=[
-        "Development Status :: 5 - Production/Stable",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Customer Service",
         "Intended Audience :: End Users/Desktop",
         "Intended Audience :: Information Technology",
         "Intended Audience :: Science/Research",
         "Intended Audience :: Other Audience",
         "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Environment :: Console",
         "Operating System :: MacOS",
         "Operating System :: Microsoft :: Windows",

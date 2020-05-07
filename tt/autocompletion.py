@@ -1,3 +1,9 @@
+# SPDX-FileCopyrightText: 2015-2019 Tailordev
+# SPDX-FileCopyrightText: 2020 The tt Authors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
+
 from functools import wraps
 from .cli_utils import create_timetracker, parse_tags
 

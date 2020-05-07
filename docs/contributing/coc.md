@@ -1,3 +1,11 @@
+<!--
+SPDX-FileCopyrightText: 2015-2019 Tailordev
+SPDX-FileCopyrightText: 2020 The tt Authors
+
+SPDX-License-Identifier: GPL-3.0-or-later
+SPDX-License-Identifier: MIT
+-->
+
 # Contributor Code of Conduct
 
 As contributors and maintainers of this project, we pledge to respect all
