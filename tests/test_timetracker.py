@@ -10,7 +10,7 @@ import pytest
 from tt import TimeTracker, TimeTrackerError
 from tt.timetracker import ConfigParser, ConfigurationError
 
-from . import mock_read, TEST_FIXTURE_DIR
+from . import mock_read
 
 
 @pytest.fixture

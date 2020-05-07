@@ -34,7 +34,6 @@ from .cli_utils import (
     get_frame_from_argument,
     get_last_frame_from_project,
     get_start_time_for_period,
-    options,
     style,
     parse_tags,
 )
