@@ -18,12 +18,14 @@ class Frame(namedtuple('Frame', HEADERS)):
     def __new__(cls, start, stop, project, id, tags=None, updated_at=None,):
         try:
             if not isinstance(start, arrow.Arrow):
+                # -> Frame.new(): arrow.get(datetime/timestamp/iso-8601-string) to transform dates frame dates
                 start = arrow.get(start)
 
             if not isinstance(stop, arrow.Arrow):
                 stop = arrow.get(stop)
 
             if updated_at is None:
+                # -> Frame.new(): arrow.utcnow() returns now in UTC time
                 updated_at = arrow.utcnow()
             elif not isinstance(updated_at, arrow.Arrow):
                 updated_at = arrow.get(updated_at)
@@ -31,6 +33,7 @@ class Frame(namedtuple('Frame', HEADERS)):
             from .tt import TimeTrackerError
             raise TimeTrackerError("Error converting date: {}".format(e))
 
+        # -> Frame.new(): arrow.to('local') to convert start/stop frame datetimes to local timezone
         start = start.to('local')
         stop = stop.to('local')
 
@@ -42,6 +45,8 @@ class Frame(namedtuple('Frame', HEADERS)):
         )
 
     def dump(self):
+        # -> Frame.dump(): arrow.to('utc') to convert start/stop to UTC when dumping
+        # -> Frame.dump(): arrow.timestamp to obtain the associated timestamp
         start = self.start.to('utc').timestamp
         stop = self.stop.to('utc').timestamp
         updated_at = self.updated_at.timestamp
@@ -49,10 +54,12 @@ class Frame(namedtuple('Frame', HEADERS)):
         return (start, stop, self.project, self.id, self.tags, updated_at)
 
     @property
-    def day(self):
+    def day(self) -> arrow.Arrow:
+        # -> (UNUSED) Frame.day: arrow.floor('day') to remove hours, minutes, seconds, etc.
         return self.start.floor('day')
 
     def __lt__(self, other):
+        # -> arrow object comparison (< > <= >=) with second granularity
         return self.start < other.start
 
     def __lte__(self, other):
@@ -68,10 +75,12 @@ class Frame(namedtuple('Frame', HEADERS)):
 class Span():
     def __init__(self, start, stop, timeframe='day'):
         self.timeframe = timeframe
+        # -> Span: arrow.floor and arrow.ceil using timeframes ('day', etc.)
         self.start = start.floor(self.timeframe)
         self.stop = stop.ceil(self.timeframe)
 
     def overlaps(self, frame):
+        # -> Span: arrow object comparison (<=, >=) with second granularity
         return frame.start <= self.stop and frame.stop >= self.start
 
     def __or__(self, other):
@@ -91,6 +100,8 @@ class Frames():
         if not frames:
             frames = []
         self._rows = []
+        # -> Frames(): arrow.now() returns local timezone
+        # -> Frames(): arrow.Arrow.fromtimestamp(0) returns arrow date with timestamp 0
         min_start, max_stop = arrow.now(), arrow.Arrow.fromtimestamp(0)
         for frame in frames:
             f = Frame(*frame)

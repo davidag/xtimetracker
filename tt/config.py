@@ -18,7 +18,7 @@ class ConfigurationError(configparser.Error, TimeTrackerError):
     pass
 
 
-class _ConfigParser(configparser.ConfigParser):
+class Config(configparser.ConfigParser):
     """A simple wrapper for ConfigParser to make options access easier."""
 
     def __init__(self, config_dir=None, **kwargs):
@@ -136,7 +136,7 @@ class _ConfigParser(configparser.ConfigParser):
         super().set(section, option, value)
 
 
-def create_configuration(contents=None, config_dir=None):
-    c = _ConfigParser(config_dir=config_dir, interpolation=None)
+def create_configuration(contents=None, config_dir=None) -> Config:
+    c = Config(config_dir=config_dir, interpolation=None)
     c.reload(contents)
     return c
