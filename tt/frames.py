@@ -6,16 +6,18 @@
 
 import uuid
 from collections import namedtuple
+from copy import copy
 
 import arrow
 
 
-HEADERS = ('start', 'stop', 'project', 'id', 'tags', 'updated_at')
 
 
 # [refactor] - use a create() method factory instead of __new__()
-class Frame(namedtuple('Frame', HEADERS)):
-    def __new__(cls, start, stop, project, id, tags=None, updated_at=None,):
+class Frame():
+    __slots__ = ('start', 'stop', 'project', 'id', 'tags', 'updated_at')
+
+    def __init__(self, start, stop, project, id, tags=None, updated_at=None):
         try:
             if not isinstance(start, arrow.Arrow):
                 # -> Frame.new(): arrow.get(datetime/timestamp/iso-8601-string) to transform dates frame dates
@@ -26,37 +28,40 @@ class Frame(namedtuple('Frame', HEADERS)):
 
             if updated_at is None:
                 # -> Frame.new(): arrow.utcnow() returns now in UTC time
-                updated_at = arrow.utcnow()
+                self.updated_at = arrow.utcnow()
             elif not isinstance(updated_at, arrow.Arrow):
-                updated_at = arrow.get(updated_at)
+                self.updated_at = arrow.get(updated_at)
         except (ValueError, TypeError) as e:
             from .tt import TimeTrackerError
             raise TimeTrackerError("Error converting date: {}".format(e))
 
         # -> Frame.new(): arrow.to('local') to convert start/stop frame datetimes to local timezone
-        start = start.to('local')
-        stop = stop.to('local')
-
-        if tags is None:
-            tags = []
-
-        return super(Frame, cls).__new__(
-            cls, start, stop, project, id, tags, updated_at
-        )
+        self.start = start.to('local')
+        self.stop = stop.to('local')
+        self.project = project
+        self.id = id
+        self.tags = [] if tags is None else tags
 
     def dump(self):
-        # -> Frame.dump(): arrow.to('utc') to convert start/stop to UTC when dumping
-        # -> Frame.dump(): arrow.timestamp to obtain the associated timestamp
-        start = self.start.to('utc').timestamp
-        stop = self.stop.to('utc').timestamp
+        # -> arrow.timestamp to obtain the associated timestamp in UTC!
+        start = self.start.timestamp
+        stop = self.stop.timestamp
         updated_at = self.updated_at.timestamp
 
         return (start, stop, self.project, self.id, self.tags, updated_at)
 
-    @property
-    def day(self) -> arrow.Arrow:
-        # -> (UNUSED) Frame.day: arrow.floor('day') to remove hours, minutes, seconds, etc.
-        return self.start.floor('day')
+    def copy(self, start=None, stop=None) -> "Frame":
+        start = copy(self.start) if start is None else start
+        stop = copy(self.stop) if stop is None else stop
+        tags = copy(self.tags) if self.tags is not None else []
+        return Frame(start, stop, self.project, self.id, tags, self.updated_at)
+
+    def __getitem__(self, index):
+        """ Make Frame iterable, to be able to do Frame(*frame) """
+        try:
+            return getattr(self, self.__slots__[index])
+        except KeyError:
+            raise IndexError
 
     def __lt__(self, other):
         # -> arrow object comparison (< > <= >=) with second granularity
@@ -115,11 +120,11 @@ class Frames():
         return len(self._rows)
 
     def __getitem__(self, key):
-        if key in HEADERS:
-            return tuple(self._get_col(key))
-        elif isinstance(key, int):
+        if isinstance(key, int):
             return self._rows[key]
-        else:
+        try:
+            return tuple(getattr(row, key) for row in self._rows)
+        except AttributeError:
             return self._rows[self._get_index_by_id(key)]
 
     def __setitem__(self, key, value):
@@ -154,11 +159,6 @@ class Frames():
             )
         except StopIteration:
             raise KeyError("Frame with id {} not found.".format(id))
-
-    def _get_col(self, col):
-        index = HEADERS.index(col)
-        for row in self._rows:
-            yield row[index]
 
     def _update_span(self, start, stop):
         min_start = min(start, self.span.start)
@@ -212,4 +212,4 @@ class Frames():
                 # over span
                 start = span.start if frame.start < span.start else frame.start
                 stop = span.stop if frame.stop > span.stop else frame.stop
-                yield frame._replace(start=start, stop=stop)
+                yield frame.copy(start=start, stop=stop)
