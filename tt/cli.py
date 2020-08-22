@@ -22,7 +22,7 @@ from .autocompletion import (
 from .config import create_configuration
 from .file_utils import safe_save
 from .frames import Frame
-from .timetracker import TimeTrackerError
+from .timetracker import TimeTrackerError, TimeTracker
 from .cli_utils import (
     adjusted_span,
     apply_weekday_offset,
@@ -83,10 +83,6 @@ class DateTimeParamType(click.ParamType):
                     "Could not match value '{}' to any supported date format"
                     .format(value)
                 )
-            # When we parse a date, we want to parse it in the timezone
-            # expected by the user, so that midnight is midnight in the local
-            # timezone, not in UTC. Cf issue #16.
-            date.tzinfo = tz.tzlocal()
             # Add an offset to match the week beginning specified in the
             # configuration
             if param.name == "week":
@@ -96,14 +92,16 @@ class DateTimeParamType(click.ParamType):
                     start_time=date, week_start=week_start)
             return date
 
-    def _parse_multiformat(self, value):
+    def _parse_multiformat(self, value) -> arrow.Arrow:
         date = None
         for fmt in (None, 'HH:mm:ss', 'HH:mm'):
             try:
                 if fmt is None:
-                    date = arrow.get(value)
+                    # -> try to parse value as ISO-8601 string as local tz
+                    date = arrow.get(value, tzinfo=tz.tzlocal())
                 else:
                     date = arrow.get(value, fmt)
+                    # -> arrow.now() returns the current time in local tz, then replace h:m:s
                     date = arrow.now().replace(
                         hour=date.hour,
                         minute=date.minute,
@@ -177,7 +175,7 @@ def help(ctx, command):
 @click.pass_obj
 @click.pass_context
 @catch_timetracker_error
-def start(ctx, timetracker, stretch, restart, args):
+def start(ctx, timetracker: TimeTracker, stretch, restart, args):
     """
     Start monitoring time for the given project.
     You can add tags indicating more specifically what you are working on with
@@ -216,8 +214,8 @@ def start(ctx, timetracker, stretch, restart, args):
             ctx.invoke(stop)
         else:
             raise click.ClickException(
-                style('error', "Project {} is already started.".format(
-                    timetracker.current['project'])
+                style('error', "Project {} is already started with tags '{}'".format(
+                    timetracker.current['project'], ", ".join(timetracker.current["tags"]))
                 )
             )
 
@@ -251,6 +249,7 @@ def stop(timetracker, cancel):
         click.echo(output_str.format(
             style('project', frame.project),
             (" " if frame.tags else "") + style('tags', frame.tags),
+            # -> Arrow.humanize() just to output start/stop datetimes...
             style('time', frame.start.humanize()),
             style('time', frame.stop.humanize()),
             style('short_id', frame.id),
@@ -303,7 +302,9 @@ def status(timetracker, project, tags, elapsed):
     click.echo("Project {}{} started {} ({} {})".format(
         style('project', current['project']),
         (" " if current['tags'] else "") + style('tags', current['tags']),
+        # -> humanize() start date
         style('time', current['start'].humanize()),
+        # -> Arrow.strftime() to output time formatted with user preferences...
         style('date', current['start'].strftime(datefmt)),
         style('time', current['start'].strftime(timefmt))
     ))
@@ -529,7 +530,7 @@ def report(timetracker, current, from_, to, projects, exclude_projects, tags,
 
 
 @cli.command()
-@click.option('-c/-C', '--current/--no-current', 'current', default=None,
+@click.option('-c/-C', '--current/--no-current', 'include_current', default=None,
               help="(Don't) include currently running frame in report.")
 @click.option('-f', '--from', 'from_', cls=MutuallyExclusiveOption,
               type=DateTime, default=arrow.now().shift(days=-7),
@@ -569,20 +570,20 @@ def report(timetracker, current, from_, to, projects, exclude_projects, tags,
 @click.pass_obj
 @click.pass_context
 @catch_timetracker_error
-def aggregate(ctx, timetracker, current, from_, to, projects, exclude_projects,
+def aggregate(ctx, timetracker, include_current, from_, to, projects, exclude_projects,
               tags, exclude_tags, output_format, pager):
     """
     Display a report of the time spent on each project aggregated by day.
 
     By default, the time spent the last 7 days is printed.
     """
-    from_, to = adjusted_span(timetracker, from_, to, current)
+    from_, to = adjusted_span(timetracker, from_, to, include_current)
     delta = (to.datetime - from_.datetime).days
     lines = []
     for i in range(delta + 1):
         offset = datetime.timedelta(days=i)
         from_offset = from_ + offset
-        output = ctx.invoke(report, current=current, from_=from_offset,
+        output = ctx.invoke(report, current=include_current, from_=from_offset,
                             to=from_offset, projects=projects,
                             exclude_projects=exclude_projects,
                             tags=tags,
@@ -799,12 +800,14 @@ def edit(timetracker, id):
                   "first one!"))
 
     data = {
+        # -> Arrow.format() ret string repr of Arrow object
         'start': frame.start.format(datetime_format),
         'project': frame.project,
         'tags': frame.tags,
     }
 
     if id:
+        # -> Arrow.format() ret string repr of Arrow object
         data['stop'] = frame.stop.format(datetime_format)
 
     text = json.dumps(data, indent=4, sort_keys=True, ensure_ascii=False)
@@ -825,10 +828,9 @@ def edit(timetracker, id):
             data = json.loads(output)
             project = data['project']
             tags = data['tags']
-            start = arrow.get(data['start'], datetime_format).replace(
-                tzinfo=local_tz).to('utc')
-            stop = arrow.get(data['stop'], datetime_format).replace(
-                tzinfo=local_tz).to('utc') if id else None
+            # -> arrow.get() in local tz
+            start = arrow.get(data['start'], datetime_format, tzinfo=local_tz)
+            stop = arrow.get(data['stop'], datetime_format, tzinfo=local_tz) if id else None
             # if start time of the project is not before end time
             #  raise ValueException
             if not timetracker.is_started and start > stop:

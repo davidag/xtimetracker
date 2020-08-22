@@ -18,9 +18,11 @@ import click
 from click.exceptions import UsageError
 
 from .timetracker import TimeTracker
+from .frames import Frame
+from .config import Config
 
 
-def create_timetracker(config):
+def create_timetracker(config: Config) -> TimeTracker:
     return TimeTracker(config=config)
 
 
@@ -56,7 +58,7 @@ def style(name, element):
         return fmt(element)
 
 
-def format_timedelta(delta):
+def format_timedelta(delta: datetime.timedelta):
     """
     Return a string roughly representing a timedelta.
     """
@@ -96,7 +98,7 @@ def options(opt_list):
 
 
 # [refactor] - get_frame_from_argument: put into TT (maybe extending frames()?)
-def get_frame_from_argument(timetracker, arg):
+def get_frame_from_argument(timetracker: TimeTracker, arg):
     """
     Get a frame from a command line argument which can either be a
     position index (-1) or a frame id.
@@ -126,13 +128,14 @@ def get_frame_from_argument(timetracker, arg):
 
 
 # [refactor] - get_last_frame_from_project: uses? demeter? move into timetracker?
-def get_last_frame_from_project(timetracker, project):
+def get_last_frame_from_project(timetracker: TimeTracker, project: str) -> Frame:
     if project not in timetracker.projects():
         return None
     last_frame = None
     for f in timetracker.frames.filter(projects=[project]):
         if not last_frame:
             last_frame = f
+        # -> arrow object comparison
         elif last_frame.start < f.start:
             last_frame = f
     return last_frame
@@ -150,14 +153,18 @@ def get_start_time_for_period(period):
     weekday = now.weekday()
 
     if period == 'day':
+        # -> Constructor equivalent to datetime()
         start_time = arrow.Arrow(year, month, day)
     elif period == 'week':
+        # -> Arrow.fromdate()
+        # -> Arrow.shift(days=) to go back some number of days!
         start_time = arrow.Arrow.fromdate(now.shift(days=-weekday).date())
     elif period == 'month':
         start_time = arrow.Arrow(year, month, 1)
     elif period == 'year':
         start_time = arrow.Arrow(year, 1, 1)
     elif period == 'full':
+        # -> timestamp 0
         start_time = arrow.Arrow.fromtimestamp(0)
     else:
         raise ValueError('Unsupported period value: {}'.format(period))
@@ -165,12 +172,12 @@ def get_start_time_for_period(period):
     return start_time
 
 
-def is_current_tracking_data(timetracker, project, tags):
+def is_current_tracking_data(timetracker: TimeTracker, project, tags):
     return (timetracker.current['project'] == project and
             set(timetracker.current['tags']) == set(tags))
 
 
-def apply_weekday_offset(start_time, week_start):
+def apply_weekday_offset(start_time: arrow.Arrow, week_start: str) -> arrow.Arrow:
     """
     Apply the offset required to move the start date `start_time` of a week
     starting on Monday to that of a week starting on `week_start`.
@@ -184,6 +191,7 @@ def apply_weekday_offset(start_time, week_start):
         return start_time
     now = datetime.datetime.now()
     offset = weekdays[new_start] - 7 * (weekdays[new_start] > now.weekday())
+    # -> Array.shift(days=)
     return start_time.shift(days=offset)
 
 
@@ -300,6 +308,7 @@ def flatten_report_for_csv(report):
     of the report.
     """
     result = []
+    # -> Arrow.format()
     datetime_from = report['timespan']['from'].format('YYYY-MM-DD HH:mm:ss')
     datetime_to = report['timespan']['to'].format('YYYY-MM-DD HH:mm:ss')
     for project in report['projects']:
@@ -341,11 +350,11 @@ def json_encoder(obj):
     raise TypeError("Object {} is not JSON serializable".format(obj))
 
 
-def adjusted_span(timetracker, from_, to, current):
+def adjusted_span(timetracker: TimeTracker, from_: arrow.Arrow, to: arrow.Arrow, include_current: bool):
     """
     Returns the number of days in interval adjusted to existing frame interval
     """
-    span = timetracker.span(current)
+    span = timetracker.full_span(include_current)
     if from_ < span.start:
         from_ = span.start
     if to > span.stop:

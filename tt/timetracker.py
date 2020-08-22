@@ -12,13 +12,14 @@ import arrow
 from collections import defaultdict
 from functools import reduce
 
+from .config import Config
 from .file_utils import safe_save
 from .utils import deduplicate, sorted_groupby, TimeTrackerError
 from .frames import Frames, Span
 
 
 class TimeTracker:
-    def __init__(self, config, **kwargs):
+    def __init__(self, config: Config, **kwargs):
         """
         :param config: Configuration object to use.
         :type config: _ConfigParser
@@ -77,17 +78,6 @@ class TimeTracker:
                 )
             )
 
-    def _parse_date(self, date):
-        """Returns Arrow object from timestamp."""
-        return arrow.Arrow.utcfromtimestamp(date).to('local')
-
-    def _format_date(self, date):
-        """Returns timestamp from string timestamp or Arrow object."""
-        if not isinstance(date, arrow.Arrow):
-            date = arrow.get(date)
-
-        return date.timestamp
-
     def _make_json_writer(func, *args, **kwargs):
         """
         Return a function that receives a file-like object and writes the
@@ -108,7 +98,8 @@ class TimeTracker:
                 if self.is_started:
                     current = {
                         'project': self.current['project'],
-                        'start': self._format_date(self.current['start']),
+                        # -> .timestamp returns timestamp in UTC (dates in files are stored in UTC)
+                        'start': self.current['start'].timestamp,
                         'tags': self.current['tags'],
                     }
                 else:
@@ -158,10 +149,13 @@ class TimeTracker:
 
             return
 
+        # -> arrow.now() to obtain current time and then the timestamp in UTC
         start = value.get('start', arrow.now())
 
+        # -> Arrow.fromtimestamp() converts str, int or float to Arrow object in localtime
+        # -> It turns out start can be sometimes be of Arrow type :S
         if not isinstance(start, arrow.Arrow):
-            start = self._parse_date(start)
+            start = arrow.Arrow.fromtimestamp(start)
 
         self._current = {
             'project': value['project'],
@@ -176,21 +170,24 @@ class TimeTracker:
     def is_started(self):
         return bool(self.current)
 
-    def span(self, include_current=False):
+    def full_span(self, include_current: bool = False) -> Span:
         s = self.frames.span
         if include_current and self.is_started:
+            # -> arrow.now() to obtain current time in local tz
             s |= Span(self.current['start'], arrow.now())
         return s
 
-    def add(self, project, from_date, to_date, tags):
+    def add(self, project: str, from_date: arrow.Arrow, to_date: arrow.Arrow, tags):
         if not project:
             raise TimeTrackerError("No project given.")
+        # -> compare dates
         if from_date > to_date:
             raise TimeTrackerError("Task cannot end before it starts.")
 
         default_tags = self.config.getlist('default_tags', project)
         tags = (tags or []) + default_tags
 
+        # -> from_date and to_date are values returned by DateTimeParam
         frame = self.frames.add(project, from_date, to_date, tags=tags)
         return frame
 
@@ -204,6 +201,7 @@ class TimeTracker:
         }
         if stretch and len(self.frames) > 0:
             max_elapsed = self.config.getint('options', 'autostretch_max_elapsed_secs', 28800)
+            # -> arrow.now() (local time) timestamp and a frame timestamp (frames are in memory as local time)
             if arrow.now().timestamp - self.frames[-1].stop.timestamp < max_elapsed:
                 new_frame['start'] = self.frames[-1].stop
         self.current = new_frame
@@ -215,6 +213,7 @@ class TimeTracker:
         frame = self.frames.add(
             self.current['project'],
             self.current['start'],
+            # -> arrow.now() returns Arrow object for now in local tz
             arrow.now(),
             tags=self.current['tags']
         )
@@ -288,6 +287,7 @@ class TimeTracker:
 
         if self.is_started and current:
             cur = self.current
+            # -> arrow.now() to add current frame with now as stop date
             self.frames.add(cur['project'], cur['start'], arrow.now(),
                             cur['tags'], id="current")
 
@@ -347,6 +347,7 @@ class TimeTracker:
             frames = tuple(frames)
             delta = reduce(
                 operator.add,
+                # -> Arrow.datetime returns a datetime object, with the correct tzinfo!
                 (f.stop.datetime - f.start.datetime for f in frames),
                 datetime.timedelta()
             )
