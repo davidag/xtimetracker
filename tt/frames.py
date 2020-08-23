@@ -5,12 +5,9 @@
 # SPDX-License-Identifier: MIT
 
 import uuid
-from collections import namedtuple
 from copy import copy
 
 import arrow
-
-
 
 
 # [refactor] - use a create() method factory instead of __new__()
@@ -20,7 +17,8 @@ class Frame():
     def __init__(self, start, stop, project, id, tags=None, updated_at=None):
         try:
             if not isinstance(start, arrow.Arrow):
-                # -> Frame.new(): arrow.get(datetime/timestamp/iso-8601-string) to transform dates frame dates
+                # -> Frame.new(): arrow.get(datetime/timestamp/iso-8601-string) to transform
+                # dates frame dates
                 start = arrow.get(start)
 
             if not isinstance(stop, arrow.Arrow):

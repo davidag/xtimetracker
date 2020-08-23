@@ -5,16 +5,13 @@
 # SPDX-License-Identifier: MIT
 
 import datetime
-import json
 import operator
-import os
 import arrow
 from collections import defaultdict
 from functools import reduce
 
 from .backend import Backend
 from .config import Config
-from .file_utils import safe_save, load_json, json_writer
 from .utils import deduplicate, sorted_groupby, TimeTrackerError
 from .frames import Frames, Span
 
@@ -130,7 +127,8 @@ class TimeTracker:
         }
         if stretch and len(self.frames) > 0:
             max_elapsed = self.config.getint('options', 'autostretch_max_elapsed_secs', 28800)
-            # -> arrow.now() (local time) timestamp and a frame timestamp (frames are in memory as local time)
+            # -> arrow.now() (local time) timestamp and a frame timestamp (frames are in memory as
+            # local time)
             if arrow.now().timestamp - self.frames[-1].stop.timestamp < max_elapsed:
                 new_frame['start'] = self.frames[-1].stop
         self.current = new_frame
