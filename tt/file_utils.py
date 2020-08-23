@@ -72,7 +72,7 @@ def load_json(filename, type=dict):
     try:
         with open(filename) as f:
             return json.load(f)
-    except IOError:
+    except FileNotFoundError:
         return type()
     except ValueError as e:
         # If we get an error because the file is empty, we ignore

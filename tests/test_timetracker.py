@@ -43,7 +43,7 @@ def test_current_with_empty_file(mocker, timetracker):
 
 
 def test_current_with_nonexistent_file(mocker, timetracker):
-    mocker.patch('builtins.open', side_effect=IOError)
+    mocker.patch('builtins.open', side_effect=FileNotFoundError)
     assert timetracker.current == {}
 
 
@@ -103,7 +103,7 @@ def test_frames_with_empty_file(mocker, timetracker):
 
 
 def test_frames_with_nonexistent_file(mocker, timetracker):
-    mocker.patch('builtins.open', side_effect=IOError)
+    mocker.patch('builtins.open', side_effect=FileNotFoundError)
     assert len(timetracker.frames) == 0
 
 
@@ -250,7 +250,8 @@ def test_save_without_changes(mocker, timetracker, json_mock):
     mocker.patch('builtins.open', mocker.mock_open())
     timetracker.save()
 
-    assert not json_mock.called
+    # an empty dict is written as current state
+    assert json_mock.called == 1
 
 
 def test_save_current(mocker, timetracker, json_mock):
@@ -308,7 +309,8 @@ def test_save_frames_no_change(config, mocker, json_mock):
     mocker.patch('builtins.open', mocker.mock_open())
     timetracker.save()
 
-    assert not json_mock.called
+    # an empty dict is written as current state
+    assert json_mock.called == 1
 
 
 def test_save_added_frame(config, mocker, json_mock):
@@ -318,7 +320,8 @@ def test_save_added_frame(config, mocker, json_mock):
     mocker.patch('builtins.open', mocker.mock_open())
     timetracker.save()
 
-    assert json_mock.call_count == 1
+    # both frames and state written
+    assert json_mock.call_count == 2
     result = json_mock.call_args[0][0]
     assert len(result) == 2
     assert result[0][2] == 'foo'
@@ -334,7 +337,8 @@ def test_save_changed_frame(config, mocker, json_mock):
     mocker.patch('builtins.open', mocker.mock_open())
     timetracker.save()
 
-    assert json_mock.call_count == 1
+    # both frames and state written
+    assert json_mock.call_count == 2
     result = json_mock.call_args[0][0]
     assert len(result) == 1
     assert result[0][2] == 'bar'
@@ -349,7 +353,7 @@ def test_timetracker_save_calls_safe_save(timetracker, mocker):
     timetracker.start('foo', tags=['A', 'B'])
     timetracker.stop()
 
-    save_mock = mocker.patch('tt.timetracker.safe_save')
+    save_mock = mocker.patch('tt.backend.safe_save')
     timetracker.save()
 
     assert timetracker._frames.changed
