@@ -29,8 +29,8 @@ def json_mock(mocker):
 
 def test_current(mocker, timetracker):
     content = json.dumps({'project': 'foo', 'start': 4000, 'tags': ['A', 'B']})
-
     mocker.patch('builtins.open', mocker.mock_open(read_data=content))
+
     assert timetracker.current['project'] == 'foo'
     assert timetracker.current['start'] == arrow.get(4000)
     assert timetracker.current['tags'] == ['A', 'B']
@@ -125,7 +125,7 @@ def test_start_new_project(timetracker):
     timetracker.start('foo', ['A', 'B'])
 
     assert timetracker.current != {}
-    assert timetracker.is_started is True
+    assert timetracker.is_started
     assert timetracker.current.get('project') == 'foo'
     assert isinstance(timetracker.current.get('start'), arrow.Arrow)
     assert timetracker.current.get('tags') == ['A', 'B']
@@ -135,7 +135,7 @@ def test_start_new_project_without_tags(timetracker):
     timetracker.start('foo')
 
     assert timetracker.current != {}
-    assert timetracker.is_started is True
+    assert timetracker.is_started
     assert timetracker.current.get('project') == 'foo'
     assert isinstance(timetracker.current.get('start'), arrow.Arrow)
     assert timetracker.current.get('tags') == []
@@ -149,7 +149,7 @@ def test_start_two_projects(timetracker):
 
     assert timetracker.current != {}
     assert timetracker.current['project'] == 'foo'
-    assert timetracker.is_started is True
+    assert timetracker.is_started
 
 
 def test_start_default_tags(timetracker):
@@ -188,7 +188,7 @@ def test_stop_started_project(timetracker):
     timetracker.stop()
 
     assert timetracker.current == {}
-    assert timetracker.is_started is False
+    assert not timetracker.is_started
     assert len(timetracker.frames) == 1
     assert timetracker.frames[0].project == 'foo'
     assert isinstance(timetracker.frames[0].start, arrow.Arrow)
@@ -201,7 +201,7 @@ def test_stop_started_project_without_tags(timetracker):
     timetracker.stop()
 
     assert timetracker.current == {}
-    assert timetracker.is_started is False
+    assert not timetracker.is_started
     assert len(timetracker.frames) == 1
     assert timetracker.frames[0].project == 'foo'
     assert isinstance(timetracker.frames[0].start, arrow.Arrow)
@@ -269,18 +269,18 @@ def test_save_current_without_tags(mocker, timetracker, json_mock):
 
 
 def test_save_empty_current(config, mocker, json_mock):
-    timetracker = TimeTracker(config, current={})
+    timetracker = TimeTracker(config)
 
     mocker.patch('builtins.open', mocker.mock_open())
 
-    timetracker.current = {'project': 'foo', 'start': 4000}
+    timetracker._current = {'project': 'foo', 'start': arrow.get(4000)}
     timetracker.save()
 
     assert json_mock.call_count == 1
     result = json_mock.call_args[0][0]
     assert result == {'project': 'foo', 'start': 4000, 'tags': []}
 
-    timetracker.current = {}
+    timetracker._current = None
     timetracker.save()
 
     assert json_mock.call_count == 2
@@ -345,7 +345,7 @@ def test_timetracker_save_calls_safe_save(timetracker, mocker):
     timetracker.save()
 
     assert timetracker._frames.changed
-    assert save_mock.call_count == 1
+    assert save_mock.call_count == 2
     assert len(save_mock.call_args[0]) == 2
     assert save_mock.call_args[0][0] == frames_file
 

@@ -13,7 +13,7 @@ from functools import reduce
 from .backend import Backend
 from .config import Config
 from .utils import deduplicate, sorted_groupby, TimeTrackerError
-from .frames import Frames, Span
+from .frames import Span
 
 
 class TimeTracker:
@@ -21,36 +21,14 @@ class TimeTracker:
         """
         :param config: Configuration object to use.
         :type config: _ConfigParser
-
-        :param frames: If given, should be a list representing the
-                        frames.
-                        If not given, the value is extracted
-                        from the frames file.
-        :type frames: list
-
-        :param current: If given, should be a dict representing the
-                        current frame.
-                        If not given, the value is extracted
-                        from the state file.
-        :type current: dict
         """
+        self.config = config
         self._current = None
         self._frames = None
-        self.config = config
         self._backend = Backend(config)
 
     def save(self):
-        if self._current and self.is_started:
-            current = {
-                'project': self.current['project'],
-                # -> .timestamp returns timestamp in UTC (dates in files are stored in UTC)
-                'start': self.current['start'].timestamp,
-                'tags': self.current['tags'],
-            }
-        else:
-            current = {}
-
-        self._backend.save(current, self._frames)
+        self._backend.save(self._current, self._frames)
 
     @property
     def frames(self):
@@ -61,48 +39,28 @@ class TimeTracker:
     @property
     def current(self):
         if self._current is None:
-            self.current = self._backend.load_state()
+            self._current = self._backend.load_state()
         return self._current
-
-    @current.setter
-    def current(self, value):
-        if not value or 'project' not in value:
-            self._current = {}
-            return
-
-        start = value.get('start', arrow.now())
-
-        if not isinstance(start, arrow.Arrow):
-            start = arrow.get(start)
-
-        self._current = {
-            'project': value['project'],
-            'start': start,
-            'tags': value.get('tags') or []
-        }
 
     @property
     def is_started(self):
-        return bool(self.current)
+        return self.current
 
     def full_span(self, include_current: bool = False) -> Span:
         s = self.frames.span
         if include_current and self.is_started:
-            # -> arrow.now() to obtain current time in local tz
             s |= Span(self.current['start'], arrow.now())
         return s
 
     def add(self, project: str, from_date: arrow.Arrow, to_date: arrow.Arrow, tags):
         if not project:
             raise TimeTrackerError("No project given.")
-        # -> compare dates
         if from_date > to_date:
             raise TimeTrackerError("Task cannot end before it starts.")
 
         default_tags = self.config.getlist('default_tags', project)
         tags = (tags or []) + default_tags
 
-        # -> from_date and to_date are values returned by DateTimeParam
         frame = self.frames.add(project, from_date, to_date, tags=tags)
         return frame
 
@@ -116,31 +74,30 @@ class TimeTracker:
         }
         if stretch and len(self.frames) > 0:
             max_elapsed = self.config.getint('options', 'autostretch_max_elapsed_secs', 28800)
-            # -> arrow.now() (local time) timestamp and a frame timestamp (frames are in memory as
-            # local time)
             if arrow.now().timestamp - self.frames[-1].stop.timestamp < max_elapsed:
                 new_frame['start'] = self.frames[-1].stop
-        self.current = new_frame
-        return self.current
+        if 'start' not in new_frame:
+            new_frame['start'] = arrow.now()
+        self._current = new_frame
+        return self._current
 
     def stop(self):
         if not self.is_started:
             raise TimeTrackerError("No project started.")
         frame = self.frames.add(
-            self.current['project'],
-            self.current['start'],
-            # -> arrow.now() returns Arrow object for now in local tz
+            self._current['project'],
+            self._current['start'],
             arrow.now(),
-            tags=self.current['tags']
+            tags=self._current['tags']
         )
-        self.current = None
+        self._current = None
         return frame
 
     def cancel(self):
         if not self.is_started:
             raise TimeTrackerError("No project started.")
-        old_current = self.current
-        self.current = None
+        old_current = self._current
+        self._current = None
         return old_current
 
     def projects(self, tags=None):
@@ -203,7 +160,6 @@ class TimeTracker:
 
         if self.is_started and current:
             cur = self.current
-            # -> arrow.now() to add current frame with now as stop date
             self.frames.add(cur['project'], cur['start'], arrow.now(),
                             cur['tags'], id="current")
 
@@ -263,7 +219,6 @@ class TimeTracker:
             frames = tuple(frames)
             delta = reduce(
                 operator.add,
-                # -> Arrow.datetime returns a datetime object, with the correct tzinfo!
                 (f.stop.datetime - f.start.datetime for f in frames),
                 datetime.timedelta()
             )

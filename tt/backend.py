@@ -1,4 +1,5 @@
 import os
+import arrow
 
 from .config import Config
 from .frames import Frames
@@ -22,7 +23,15 @@ class Backend:
         """
         try:
             if self._last_state is None or state != self._last_state:
-                safe_save(self._state_file, json_writer(lambda: state))
+                if state is not None:
+                    raw_state = {
+                        'project': state['project'],
+                        'start': state['start'].timestamp,
+                        'tags': state.get('tags', []),
+                    }
+                else:
+                    raw_state = {}
+                safe_save(self._state_file, json_writer(lambda: raw_state))
                 self._last_state = state
 
             if frames is not None and frames.changed:
@@ -34,7 +43,17 @@ class Backend:
             )
 
     def load_state(self) -> dict:
-        self._last_state = load_json(self._state_file)
+        raw_state = load_json(self._state_file)
+
+        if not raw_state or 'project' not in raw_state:
+            self._last_state = {}
+            return self._last_state
+
+        self._last_state = {
+            'project': raw_state['project'],
+            'start': arrow.get(raw_state['start']),
+            'tags': raw_state.get('tags') or []
+        }
         return self._last_state
 
     def load_frames(self) -> Frames:
