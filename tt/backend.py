@@ -37,5 +37,6 @@ class Backend:
         self._last_state = load_json(self._state_file)
         return self._last_state
 
-    def load_frames(self) -> list:
-        return load_json(self._frames_file, type=list)
+    def load_frames(self) -> Frames:
+        raw_frames = load_json(self._frames_file, type=list)
+        return Frames(raw_frames)

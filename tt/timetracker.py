@@ -39,12 +39,6 @@ class TimeTracker:
         self.config = config
         self._backend = Backend(config)
 
-        if 'frames' in kwargs:
-            self.frames = kwargs['frames']
-
-        if 'current' in kwargs:
-            self.current = kwargs['current']
-
     def save(self):
         if self._current and self.is_started:
             current = {
@@ -61,13 +55,8 @@ class TimeTracker:
     @property
     def frames(self):
         if self._frames is None:
-            self.frames = self._backend.load_frames()
-
+            self._frames = self._backend.load_frames()
         return self._frames
-
-    @frames.setter
-    def frames(self, frames):
-        self._frames = Frames(frames)
 
     @property
     def current(self):
