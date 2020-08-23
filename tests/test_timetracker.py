@@ -58,18 +58,11 @@ def test_current_timetracker_non_valid_json(mocker, timetracker):
 
 def test_current_with_given_state(config, mocker):
     content = json.dumps({'project': 'foo', 'start': 4000})
-    timetracker = TimeTracker(config, current={'project': 'bar', 'start': 4000})
-
     mocker.patch('builtins.open', mocker.mock_open(read_data=content))
-    assert timetracker.current['project'] == 'bar'
 
+    timetracker = TimeTracker(config)
 
-def test_current_with_empty_given_state(config, mocker):
-    content = json.dumps({'project': 'foo', 'start': 4000})
-    timetracker = TimeTracker(config, current=[])
-
-    mocker.patch('builtins.open', mocker.mock_open(read_data=content))
-    assert timetracker.current == {}
+    assert timetracker.current['project'] == 'foo'
 
 
 # frames
@@ -117,21 +110,13 @@ def test_frames_timetracker(mocker, timetracker):
 
 
 def test_given_frames(config, mocker):
-    content = json.dumps([[4000, 4010, 'foo', None, ['A']]])
-    timetracker = TimeTracker(config, frames=[[4000, 4010, 'bar', None, ['A', 'B']]])
+    content = json.dumps([[4000, 4010, 'bar', None, ['A', 'B']]])
+    timetracker = TimeTracker(config)
 
     mocker.patch('builtins.open', mocker.mock_open(read_data=content))
     assert len(timetracker.frames) == 1
     assert timetracker.frames[0].project == 'bar'
     assert timetracker.frames[0].tags == ['A', 'B']
-
-
-def test_frames_with_empty_given_state(config, mocker):
-    content = json.dumps([[0, 10, 'foo', None, ['A']]])
-    timetracker = TimeTracker(config, frames=[])
-
-    mocker.patch('builtins.open', mocker.mock_open(read_data=content))
-    assert len(timetracker.frames) == 0
 
 
 # start
@@ -304,9 +289,10 @@ def test_save_empty_current(config, mocker, json_mock):
 
 
 def test_save_frames_no_change(config, mocker, json_mock):
-    timetracker = TimeTracker(config, frames=[[4000, 4010, 'foo', None]])
+    content = json.dumps([[4000, 4010, 'bar', None, ['A', 'B']]])
+    mocker.patch('builtins.open', mocker.mock_open(read_data=content))
 
-    mocker.patch('builtins.open', mocker.mock_open())
+    timetracker = TimeTracker(config)
     timetracker.save()
 
     # an empty dict is written as current state
@@ -314,14 +300,15 @@ def test_save_frames_no_change(config, mocker, json_mock):
 
 
 def test_save_added_frame(config, mocker, json_mock):
-    timetracker = TimeTracker(config, frames=[[4000, 4010, 'foo', None]])
-    timetracker.frames.add('bar', 4010, 4020, ['A'])
+    content = json.dumps([[4000, 4010, 'foo', None, None]])
+    mocker.patch('builtins.open', mocker.mock_open(read_data=content))
 
-    mocker.patch('builtins.open', mocker.mock_open())
+    timetracker = TimeTracker(config)
+    timetracker.frames.add('bar', 4010, 4020, ['A'])
     timetracker.save()
 
     # both frames and state written
-    assert json_mock.call_count == 2
+    assert json_mock.call_count == 3
     result = json_mock.call_args[0][0]
     assert len(result) == 2
     assert result[0][2] == 'foo'
@@ -331,14 +318,15 @@ def test_save_added_frame(config, mocker, json_mock):
 
 
 def test_save_changed_frame(config, mocker, json_mock):
-    timetracker = TimeTracker(config, frames=[[4000, 4010, 'foo', None, ['A']]])
-    timetracker.frames[0] = ('bar', 4000, 4010, ['A', 'B'])
+    content = json.dumps([[4000, 4010, 'foo', None, ['A']]])
+    mocker.patch('builtins.open', mocker.mock_open(read_data=content))
 
-    mocker.patch('builtins.open', mocker.mock_open())
+    timetracker = TimeTracker(config)
+    timetracker.frames[0] = ('bar', 4000, 4010, ['A', 'B'])
     timetracker.save()
 
     # both frames and state written
-    assert json_mock.call_count == 2
+    assert json_mock.call_count == 3
     result = json_mock.call_args[0][0]
     assert len(result) == 1
     assert result[0][2] == 'bar'
