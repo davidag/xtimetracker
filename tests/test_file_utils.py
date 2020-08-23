@@ -7,10 +7,11 @@
 """Unit tests for the 'file_utils' module."""
 
 import os
+from io import StringIO
 
 import pytest
 
-from tt.file_utils import safe_save
+from tt.file_utils import safe_save, json_writer
 
 
 def test_safe_save(config):
@@ -85,3 +86,34 @@ def test_safe_save_with_exception(config):
         assert fp.read() == "Success"
 
     assert not os.path.exists(backup_file)
+
+
+def test_make_json_writer():
+    fp = StringIO()
+    writer = json_writer(lambda: {'foo': 42})
+    writer(fp)
+    assert fp.getvalue() == '{\n "foo": 42\n}'
+
+
+def test_make_json_writer_with_args():
+    fp = StringIO()
+    writer = json_writer(lambda x: {'foo': x}, 23)
+    writer(fp)
+    assert fp.getvalue() == '{\n "foo": 23\n}'
+
+
+def test_make_json_writer_with_kwargs():
+    fp = StringIO()
+    writer = json_writer(
+        lambda foo=None: {'foo': foo}, foo='bar')
+    writer(fp)
+    assert fp.getvalue() == '{\n "foo": "bar"\n}'
+
+
+def test_make_json_writer_with_unicode():
+    fp = StringIO()
+    writer = json_writer(lambda: {'ùñï©ôð€': 'εvεrywhεrε'})
+    writer(fp)
+    expected = '{\n "ùñï©ôð€": "εvεrywhεrε"\n}'
+    assert fp.getvalue() == expected
+

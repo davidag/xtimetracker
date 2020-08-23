@@ -13,7 +13,7 @@ from collections import defaultdict
 from functools import reduce
 
 from .config import Config
-from .file_utils import safe_save
+from .file_utils import safe_save, load_json, json_writer
 from .utils import deduplicate, sorted_groupby, TimeTrackerError
 from .frames import Frames, Span
 
@@ -50,45 +50,6 @@ class TimeTracker:
         if 'current' in kwargs:
             self.current = kwargs['current']
 
-    def _load_json_file(self, filename, type=dict):
-        """
-        Return the content of the the given JSON file.
-        If the file doesn't exist, return an empty instance of the
-        given type.
-        """
-        try:
-            with open(filename) as f:
-                return json.load(f)
-        except IOError:
-            return type()
-        except ValueError as e:
-            # If we get an error because the file is empty, we ignore
-            # it and return an empty dict. Otherwise, we raise
-            # an exception in order to avoid corrupting the file.
-            if os.path.getsize(filename) == 0:
-                return type()
-            else:
-                raise TimeTrackerError(
-                    "Invalid JSON file {}: {}".format(filename, e)
-                )
-        except Exception as e:
-            raise TimeTrackerError(
-                "Unexpected error while loading JSON file {}: {}".format(
-                    filename, e
-                )
-            )
-
-    def _make_json_writer(func, *args, **kwargs):
-        """
-        Return a function that receives a file-like object and writes the
-        return value of func(*args, **kwargs) as JSON to it.
-        """
-        def writer(f):
-            dump = json.dumps(
-                func(*args, **kwargs), indent=1, ensure_ascii=False)
-            f.write(dump)
-        return writer
-
     def save(self):
         """
         Save the state in the appropriate files. Create them if necessary.
@@ -105,13 +66,11 @@ class TimeTracker:
                 else:
                     current = {}
 
-                safe_save(self.state_file,
-                          TimeTracker._make_json_writer(lambda: current))
+                safe_save(self.state_file, json_writer(lambda: current))
                 self._old_state = current
 
             if self._frames is not None and self._frames.changed:
-                safe_save(self.frames_file,
-                          TimeTracker._make_json_writer(self.frames.dump))
+                safe_save(self.frames_file, json_writer(self.frames.dump))
 
         except OSError as e:
             raise TimeTrackerError(
@@ -121,7 +80,7 @@ class TimeTracker:
     @property
     def frames(self):
         if self._frames is None:
-            self.frames = self._load_json_file(self.frames_file, type=list)
+            self.frames = load_json(self.frames_file, type=list)
 
         return self._frames
 
@@ -132,7 +91,7 @@ class TimeTracker:
     @property
     def current(self):
         if self._current is None:
-            self.current = self._load_json_file(self.state_file)
+            self.current = load_json(self.state_file)
 
         if self._old_state is None:
             self._old_state = self._current

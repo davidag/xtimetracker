@@ -8,7 +8,6 @@
 
 import json
 import os
-from io import StringIO
 
 import arrow
 import pytest
@@ -25,36 +24,6 @@ def json_mock(mocker):
 
 # NOTE: All timestamps need to be > 3600 to avoid breaking the tests on
 # Windows.
-
-def test_make_json_writer():
-    fp = StringIO()
-    writer = TimeTracker._make_json_writer(lambda: {'foo': 42})
-    writer(fp)
-    assert fp.getvalue() == '{\n "foo": 42\n}'
-
-
-def test_make_json_writer_with_args():
-    fp = StringIO()
-    writer = TimeTracker._make_json_writer(lambda x: {'foo': x}, 23)
-    writer(fp)
-    assert fp.getvalue() == '{\n "foo": 23\n}'
-
-
-def test_make_json_writer_with_kwargs():
-    fp = StringIO()
-    writer = TimeTracker._make_json_writer(
-        lambda foo=None: {'foo': foo}, foo='bar')
-    writer(fp)
-    assert fp.getvalue() == '{\n "foo": "bar"\n}'
-
-
-def test_make_json_writer_with_unicode():
-    fp = StringIO()
-    writer = TimeTracker._make_json_writer(lambda: {'ùñï©ôð€': 'εvεrywhεrε'})
-    writer(fp)
-    expected = '{\n "ùñï©ôð€": "εvεrywhεrε"\n}'
-    assert fp.getvalue() == expected
-
 
 # current
 
