@@ -350,7 +350,12 @@ def json_encoder(obj):
     raise TypeError("Object {} is not JSON serializable".format(obj))
 
 
-def adjusted_span(timetracker: TimeTracker, from_: arrow.Arrow, to: arrow.Arrow, include_current: bool):
+def adjusted_span(
+    timetracker: TimeTracker,
+    from_: arrow.Arrow,
+    to: arrow.Arrow,
+    include_current: bool
+):
     """
     Returns the number of days in interval adjusted to existing frame interval
     """

@@ -116,4 +116,3 @@ def test_make_json_writer_with_unicode():
     writer(fp)
     expected = '{\n "ùñï©ôð€": "εvεrywhεrε"\n}'
     assert fp.getvalue() == expected
-

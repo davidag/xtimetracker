@@ -44,6 +44,9 @@ clean:
 distclean: clean
 	rm -fr *.egg *.egg-info/ .eggs/
 
+lint:
+	@flake8 tt tests scripts
+
 .PHONY:
 mostlyclean: clean distclean
 	rm -rf "$(VENV_DIR)"

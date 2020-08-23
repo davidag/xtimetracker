@@ -3,6 +3,7 @@ import os
 from .config import Config
 from .frames import Frames
 from .file_utils import safe_save, json_writer, load_json
+from .utils import TimeTrackerError
 
 
 class Backend:

@@ -10,9 +10,11 @@ from os.path import join
 
 from setuptools import setup
 
+
 def readme():
     """Return contents of README.rst"""
     return open('README.rst').read()
+
 
 # read package meta-data from version.py
 pkg = {}
