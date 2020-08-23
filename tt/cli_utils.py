@@ -164,8 +164,7 @@ def get_start_time_for_period(period):
     elif period == 'year':
         start_time = arrow.Arrow(year, 1, 1)
     elif period == 'full':
-        # -> timestamp 0
-        start_time = arrow.Arrow.fromtimestamp(0)
+        start_time = arrow.get(0)
     else:
         raise ValueError('Unsupported period value: {}'.format(period))
 

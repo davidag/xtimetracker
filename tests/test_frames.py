@@ -4,15 +4,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
 
-from arrow import Arrow
+import arrow
 
 from tt.frames import Span, Frames, Frame
 
 
 def test_span_union():
-    d1 = Arrow.fromtimestamp(1000)
-    d2 = Arrow.fromtimestamp(2000)
-    d3 = Arrow.fromtimestamp(3000)
+    d1 = arrow.get(1000)
+    d2 = arrow.get(2000)
+    d3 = arrow.get(3000)
     s1 = Span(d1, d2, timeframe='second')
     s2 = Span(d2, d3, timeframe='second')
     s3 = s1 | s2
@@ -20,10 +20,10 @@ def test_span_union():
 
 
 def test_span_disjoint_union():
-    d1 = Arrow.fromtimestamp(1000)
-    d2 = Arrow.fromtimestamp(1500)
-    d3 = Arrow.fromtimestamp(3000)
-    d4 = Arrow.fromtimestamp(4500)
+    d1 = arrow.get(1000)
+    d2 = arrow.get(1500)
+    d3 = arrow.get(3000)
+    d4 = arrow.get(4500)
     s1 = Span(d1, d2, timeframe='second')
     s2 = Span(d3, d4, timeframe='second')
     s3 = s1 | s2
@@ -31,10 +31,10 @@ def test_span_disjoint_union():
 
 
 def test_span_union_keeps_original():
-    d1 = Arrow.fromtimestamp(1000)
-    d2 = Arrow.fromtimestamp(1500)
-    d3 = Arrow.fromtimestamp(3000)
-    d4 = Arrow.fromtimestamp(4500)
+    d1 = arrow.get(1000)
+    d2 = arrow.get(1500)
+    d3 = arrow.get(3000)
+    d4 = arrow.get(4500)
     s1 = Span(d1, d2, timeframe='second')
     s1o = s1
     s2 = Span(d3, d4, timeframe='second')

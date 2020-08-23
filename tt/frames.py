@@ -16,23 +16,19 @@ class Frame:
     def __init__(self, start, stop, project, id, tags=None, updated_at=None):
         try:
             if not isinstance(start, arrow.Arrow):
-                # -> Frame.new(): arrow.get(datetime/timestamp/iso-8601-string) to transform
-                # dates frame dates
                 start = arrow.get(start)
 
             if not isinstance(stop, arrow.Arrow):
                 stop = arrow.get(stop)
 
             if updated_at is None:
-                # -> Frame.new(): arrow.utcnow() returns now in UTC time
-                self.updated_at = arrow.utcnow()
+                self.updated_at = arrow.now()
             elif not isinstance(updated_at, arrow.Arrow):
                 self.updated_at = arrow.get(updated_at)
         except (ValueError, TypeError) as e:
             from .tt import TimeTrackerError
             raise TimeTrackerError("Error converting date: {}".format(e))
 
-        # -> Frame.new(): arrow.to('local') to convert start/stop frame datetimes to local timezone
         self.start = start.to('local')
         self.stop = stop.to('local')
         self.project = project
@@ -40,7 +36,6 @@ class Frame:
         self.tags = [] if tags is None else tags
 
     def dump(self):
-        # -> arrow.timestamp to obtain the associated timestamp in UTC!
         start = self.start.timestamp
         stop = self.stop.timestamp
         updated_at = self.updated_at.timestamp
@@ -61,7 +56,6 @@ class Frame:
             raise IndexError
 
     def __lt__(self, other):
-        # -> arrow object comparison (< > <= >=) with second granularity
         return self.start < other.start
 
     def __lte__(self, other):
@@ -77,15 +71,13 @@ class Frame:
 class Span():
     def __init__(self, start, stop, timeframe='day'):
         self.timeframe = timeframe
-        # -> Span: arrow.floor and arrow.ceil using timeframes ('day', etc.)
         self.start = start.floor(self.timeframe)
         self.stop = stop.ceil(self.timeframe)
 
-    def overlaps(self, frame):
-        # -> Span: arrow object comparison (<=, >=) with second granularity
+    def overlaps(self, frame: Frame) -> bool:
         return frame.start <= self.stop and frame.stop >= self.start
 
-    def __or__(self, other):
+    def __or__(self, other: "Span") -> "Span":
         new_span = Span(self.start, self.stop, self.timeframe)
         if other.start < self.start:
             new_span.start = other.start.floor(self.timeframe)
@@ -93,7 +85,7 @@ class Span():
             new_span.stop = other.stop.ceil(self.timeframe)
         return new_span
 
-    def __contains__(self, frame):
+    def __contains__(self, frame: Frame) -> bool:
         return frame.start >= self.start and frame.stop <= self.stop
 
 
@@ -102,9 +94,7 @@ class Frames():
         if not frames:
             frames = []
         self._rows = []
-        # -> Frames(): arrow.now() returns local timezone
-        # -> Frames(): arrow.Arrow.fromtimestamp(0) returns arrow date with timestamp 0
-        min_start, max_stop = arrow.now(), arrow.Arrow.fromtimestamp(0)
+        min_start, max_stop = arrow.now(), arrow.get(0)
         for frame in frames:
             f = Frame(*frame)
             min_start = min(min_start, f.start)
