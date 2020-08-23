@@ -10,8 +10,7 @@ from copy import copy
 import arrow
 
 
-# [refactor] - use a create() method factory instead of __new__()
-class Frame():
+class Frame:
     __slots__ = ('start', 'stop', 'project', 'id', 'tags', 'updated_at')
 
     def __init__(self, start, stop, project, id, tags=None, updated_at=None):
