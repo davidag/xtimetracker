@@ -835,6 +835,10 @@ def edit(timetracker, id):
             if not timetracker.is_started and start > stop:
                 raise ValueError(
                     "Task cannot end before it starts.")
+            if start > arrow.now():
+                raise ValueError("Start date can't be in the future")
+            if stop and stop > arrow.now():
+                raise ValueError("Stop date can't be in the future")
             # break out of while loop and continue execution of
             #  the edit function normally
             break
