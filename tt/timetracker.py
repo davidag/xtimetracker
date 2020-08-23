@@ -12,6 +12,7 @@ import arrow
 from collections import defaultdict
 from functools import reduce
 
+from .backend import Backend
 from .config import Config
 from .file_utils import safe_save, load_json, json_writer
 from .utils import deduplicate, sorted_groupby, TimeTrackerError
@@ -37,12 +38,9 @@ class TimeTracker:
         :type current: dict
         """
         self._current = None
-        self._old_state = None
         self._frames = None
         self.config = config
-
-        self.frames_file = os.path.join(self.config.config_dir, 'frames')
-        self.state_file = os.path.join(self.config.config_dir, 'state')
+        self._backend = Backend(config)
 
         if 'frames' in kwargs:
             self.frames = kwargs['frames']
@@ -51,36 +49,22 @@ class TimeTracker:
             self.current = kwargs['current']
 
     def save(self):
-        """
-        Save the state in the appropriate files. Create them if necessary.
-        """
-        try:
-            if self._current is not None and self._old_state != self._current:
-                if self.is_started:
-                    current = {
-                        'project': self.current['project'],
-                        # -> .timestamp returns timestamp in UTC (dates in files are stored in UTC)
-                        'start': self.current['start'].timestamp,
-                        'tags': self.current['tags'],
-                    }
-                else:
-                    current = {}
+        if self._current and self.is_started:
+            current = {
+                'project': self.current['project'],
+                # -> .timestamp returns timestamp in UTC (dates in files are stored in UTC)
+                'start': self.current['start'].timestamp,
+                'tags': self.current['tags'],
+            }
+        else:
+            current = {}
 
-                safe_save(self.state_file, json_writer(lambda: current))
-                self._old_state = current
-
-            if self._frames is not None and self._frames.changed:
-                safe_save(self.frames_file, json_writer(self.frames.dump))
-
-        except OSError as e:
-            raise TimeTrackerError(
-                "Impossible to write {}: {}".format(e.filename, e)
-            )
+        self._backend.save(current, self._frames)
 
     @property
     def frames(self):
         if self._frames is None:
-            self.frames = load_json(self.frames_file, type=list)
+            self.frames = self._backend.load_frames()
 
         return self._frames
 
@@ -91,39 +75,25 @@ class TimeTracker:
     @property
     def current(self):
         if self._current is None:
-            self.current = load_json(self.state_file)
-
-        if self._old_state is None:
-            self._old_state = self._current
-
-        return dict(self._current)
+            self.current = self._backend.load_state()
+        return self._current
 
     @current.setter
     def current(self, value):
         if not value or 'project' not in value:
             self._current = {}
-
-            if self._old_state is None:
-                self._old_state = {}
-
             return
 
-        # -> arrow.now() to obtain current time and then the timestamp in UTC
         start = value.get('start', arrow.now())
 
-        # -> Arrow.fromtimestamp() converts str, int or float to Arrow object in localtime
-        # -> It turns out start can be sometimes be of Arrow type :S
         if not isinstance(start, arrow.Arrow):
-            start = arrow.Arrow.fromtimestamp(start)
+            start = arrow.get(start)
 
         self._current = {
             'project': value['project'],
             'start': start,
             'tags': value.get('tags') or []
         }
-
-        if self._old_state is None:
-            self._old_state = self._current
 
     @property
     def is_started(self):
