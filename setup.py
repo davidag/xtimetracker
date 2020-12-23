@@ -53,7 +53,7 @@ setup(
     license='GPL-3.0-or-later AND MIT',
     long_description=readme(),
     install_requires=parse_requirements('requirements.txt'),
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     tests_require=parse_requirements('requirements-dev.txt'),
     entry_points={
         'console_scripts': [
@@ -74,7 +74,6 @@ setup(
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Topic :: Office/Business",

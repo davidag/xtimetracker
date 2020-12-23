@@ -34,7 +34,7 @@ Ready to contribute? Here's how to set up *tt* for local development.
     To use a different Python version, define the `PYTHON` shell variable.
     For example:
 
-        $ PYTHON=python3.5 make env
+        $ PYTHON=python3.6 make env
 
 4. Install dependencies and deploy tt inside the virtual environment:
 
