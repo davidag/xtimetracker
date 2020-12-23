@@ -30,6 +30,7 @@ venv
 pip-delete-this-directory.txt
 pip-log.txt
 tags
+.python-version
 
 # patterns
 
