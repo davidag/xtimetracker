@@ -13,6 +13,7 @@ import arrow
 import click
 from dateutil import tz
 
+from . import __version__
 from .autocompletion import (
     get_frames,
     get_project_or_tag_completion,
@@ -42,7 +43,6 @@ from .cli_utils import (
     parse_tags,
 )
 from .utils import sorted_groupby
-from .version import version as __version__  # noqa
 
 
 class MutuallyExclusiveOption(click.Option):

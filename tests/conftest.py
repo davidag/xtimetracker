@@ -9,7 +9,7 @@
 import pytest
 from click.testing import CliRunner
 
-from tt import TimeTracker
+from tt.timetracker import TimeTracker
 from tt.config import create_configuration
 
 

@@ -1,6 +1,0 @@
-# SPDX-FileCopyrightText: 2020 The tt Authors
-#
-# SPDX-License-Identifier: MIT
-
-[flake8]
-max-line-length = 100

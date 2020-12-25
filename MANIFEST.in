@@ -1,21 +1,5 @@
-# SPDX-FileCopyrightText: 2015-2019 Tailordev
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-3.0-or-later
 
-include CHANGELOG.md
-include CONTRIBUTING.md
-include LICENSE
-include Makefile
-include mkdocs.yml
-include README.md
-include requirements-dev.txt
-include requirements.txt
-include tox.ini
-include tt.completion
-include tt.zsh-completion
-
-recursive-include docs *.css *.gif *.md *.png *.svg
-recursive-include scripts *
-recursive-include tests *.py frames
-
-recursive-exclude tests *.pyc
+recursive-exclude tests *

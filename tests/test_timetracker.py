@@ -12,7 +12,8 @@ import os
 import arrow
 import pytest
 
-from tt import TimeTracker, TimeTrackerError
+from tt.timetracker import TimeTracker
+from tt.utils import TimeTrackerError
 
 
 @pytest.fixture

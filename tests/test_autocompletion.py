@@ -11,13 +11,13 @@ from argparse import Namespace
 
 import pytest
 
-from tt import TimeTracker
 from tt.autocompletion import (
     get_frames,
     get_project_or_tag_completion,
     get_projects,
     get_tags,
 )
+from tt.timetracker import TimeTracker
 
 from . import TEST_FIXTURE_DIR
 
