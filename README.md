@@ -1,37 +1,41 @@
-# xtimetracker
+# `xtimetracker`
+
+*Simple time tracking from the command line.*
 
 ## Overview
 
-xtimetracker is here to help you manage your time. You want to know how
-much time you are spending on your projects? You want to generate a nice
-report for your clients? xtimetracker is here for you.
+`xtimetracker` helps you manage your projects and track your time. It is a command line tool (`x`) with a simple set of commands and options. It was born as a fork of the [Watson project](https://github.com/TailorDev/Watson) and is compatible with its JSON file format.
 
 ## Installing
 
-TODO
+You can install it using `pip` like this:
+
+```console
+$ pip install xtimetracker
+```
 
 ## Usage
 
 Start tracking your activity via:
 
 ```console
-$ x start world-domination +cats
+$ x start research +experiment-a
 ```
 
-With this command, you have started a new **frame** for the *world-domination* project with the *cats* tag. That's it.
+With this command, you have started a new **frame** for the *research* project with the *experiment-a* tag.
 
-Now stop tracking you world domination plan via:
+Now stop tracking via:
 
 ```console
 $ x stop
-Project world-domination [cats] started 8 minutes ago (2016.01.27 13:00:28+0100)
+Stopping project research [experiment-a], started 30 minutes ago and stopped just now. (id: 5c57b13)
 ```
 
-You can log your latest working sessions (aka **frames**) thanks to the ``log`` command:
+You can view a log of your latest working sessions using the ``log`` command:
 
 ```console
 $ x log
-Tuesday 26 January 2016 (8m 32s)
+Tuesday 26 January 2020 (8m 32s)
       ffb2a4c  13:00 to 13:08      08m 32s   world-domination  [cats]
 ```
 
