@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2020 The tt Authors
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
@@ -11,7 +11,7 @@ from io import StringIO
 
 import pytest
 
-from tt.file_utils import safe_save, json_writer
+from xtimetracker.file_utils import safe_save, json_writer
 
 
 def test_safe_save(config):

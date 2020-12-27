@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2020 The tt Authors
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
@@ -13,7 +13,7 @@ import sys
 
 import arrow
 
-from tt import TimeTracker
+from xtt.timetracker import TimeTracker
 
 FUZZER_PROJECTS = [
     ("apollo11", ["reactor", "module", "wheels", "steering", "brakes"]),

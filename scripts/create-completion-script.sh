@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2020 The tt Authors
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
@@ -41,11 +41,11 @@ case $1 in
     ;;
   bash)
     src_command="source"
-    dst_script="tt.completion"
+    dst_script="x.completion"
     ;;
   zsh)
     src_command="source_zsh"
-    dst_script="tt.zsh-completion"
+    dst_script="x.zsh-completion"
     ;;
   *)
     echo "Unknown argument '$1'. Please consult help text." >&2
@@ -61,6 +61,6 @@ if [[ "$inside_venv" == "0" ]]; then
     exit 1
 fi
 
-_TT_COMPLETE=$src_command tt > $dst_script
+_X_COMPLETE=$src_command x > $dst_script
 
 exit 0

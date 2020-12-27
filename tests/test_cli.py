@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2020 The tt Authors
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
@@ -13,7 +13,7 @@ from dateutil.tz import tzlocal
 import arrow
 import pytest
 
-from tt import cli
+from xtimetracker import cli
 
 from . import TEST_FIXTURE_DIR
 
@@ -98,7 +98,7 @@ class OutputParser:
         return timetracker.frames[frame_id].start.format('YYYY-MM-DD HH:mm:ss')
 
 
-# tt start
+# start
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
 def test_start_doesnt_support_frame_references(runner, timetracker_df):
@@ -347,7 +347,7 @@ def test_start_restart_config_current_project_implicit_same_tags(runner, timetra
     assert timetracker.current['project'] == 'project-1'
 
 
-# tt help
+# help
 
 @pytest.mark.parametrize('cmd_name', ['add', 'start', 'stop'])
 def test_show_command_help(runner, timetracker, cmd_name):
@@ -359,7 +359,7 @@ def test_show_command_help(runner, timetracker, cmd_name):
     assert result.output.startswith('Usage: ' + cmd_name)
 
 
-# tt add
+# add
 
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
 def test_add_valid_date(runner, timetracker, test_dt, expected):
@@ -379,7 +379,7 @@ def test_add_invalid_date(runner, timetracker, test_dt):
     assert result.exit_code != 0
 
 
-# tt aggregate
+# aggregate
 
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
 def test_aggregate_valid_date(runner, timetracker, test_dt, expected):
@@ -481,7 +481,7 @@ def test_incompatible_options(runner, timetracker, cmd):
         assert result.exit_code != 0
 
 
-# tt log
+# log
 
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
 def test_log_valid_date(runner, timetracker, test_dt, expected):
@@ -497,7 +497,7 @@ def test_log_invalid_date(runner, timetracker, test_dt):
     assert result.exit_code != 0
 
 
-# tt report
+# report
 
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
 def test_report_valid_date(runner, timetracker, test_dt, expected):

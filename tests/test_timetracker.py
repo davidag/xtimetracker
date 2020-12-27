@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2020 The tt Authors
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
@@ -12,8 +12,8 @@ import os
 import arrow
 import pytest
 
-from tt.timetracker import TimeTracker
-from tt.utils import TimeTrackerError
+from xtimetracker.timetracker import TimeTracker
+from xtimetracker.utils import TimeTrackerError
 
 
 @pytest.fixture
@@ -342,7 +342,7 @@ def test_timetracker_save_calls_safe_save(timetracker, mocker):
     timetracker.start('foo', tags=['A', 'B'])
     timetracker.stop()
 
-    save_mock = mocker.patch('tt.backend.safe_save')
+    save_mock = mocker.patch('xtimetracker.backend.safe_save')
     timetracker.save()
 
     assert timetracker._frames.changed

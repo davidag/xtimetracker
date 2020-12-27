@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2020 The tt Authors
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
@@ -23,7 +23,7 @@ class Config(configparser.ConfigParser):
 
     def __init__(self, config_dir=None, **kwargs):
         if config_dir is None:
-            self.config_dir = os.environ.get('TT_DIR', get_app_dir('tt'))
+            self.config_dir = os.environ.get('XTT_DIR', get_app_dir('xtimetracker'))
         else:
             self.config_dir = config_dir
         self.config_file = os.path.join(self.config_dir, 'config')

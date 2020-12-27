@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2020 The tt Authors
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
@@ -127,11 +127,11 @@ def catch_timetracker_error(func):
 
 
 @click.group(invoke_without_command=True)
-@click.version_option(version=__version__, prog_name='tt')
+@click.version_option(version=__version__, prog_name='x')
 @click.pass_context
 def cli(ctx):
     """
-    tt is a tool aimed for monitoring your time.
+    x-timetracker is a tool aimed for monitoring your time.
     """
 
     # This is the main command group, needed by click in order
@@ -769,7 +769,7 @@ def edit(timetracker, id):
 
     You can specify the frame to edit by its position or by its frame id.
     For example, to edit the second-to-last frame, pass `-2` as the frame
-    index. You can get the id of a frame with the `tt log` command.
+    index. You can get the id of a frame with the `x log` command.
 
     If no id or index is given, the frame defaults to the current frame (or the
     last recorded frame, if no project is currently running).
@@ -902,8 +902,8 @@ def config(ctx, timetracker, key, value, edit):
     Example:
 
     \b
-    $ tt config options.include_current true
-    $ tt config options.include_current
+    $ x config options.include_current true
+    $ x config options.include_current
     true
     """
     config = timetracker.config

@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2020 The tt Authors
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
@@ -8,6 +8,8 @@ import uuid
 from copy import copy
 
 import arrow
+
+from .utils import TimeTrackerError
 
 
 class Frame:
@@ -26,7 +28,6 @@ class Frame:
             elif not isinstance(updated_at, arrow.Arrow):
                 self.updated_at = arrow.get(updated_at)
         except (ValueError, TypeError) as e:
-            from .tt import TimeTrackerError
             raise TimeTrackerError("Error converting date: {}".format(e))
 
         self.start = start.to('local')

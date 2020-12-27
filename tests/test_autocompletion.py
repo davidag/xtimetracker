@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2020 The tt Authors
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
@@ -11,13 +11,13 @@ from argparse import Namespace
 
 import pytest
 
-from tt.autocompletion import (
+from xtimetracker.autocompletion import (
     get_frames,
     get_project_or_tag_completion,
     get_projects,
     get_tags,
 )
-from tt.timetracker import TimeTracker
+from xtimetracker.timetracker import TimeTracker
 
 from . import TEST_FIXTURE_DIR
 

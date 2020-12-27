@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2020 The tt Authors
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
@@ -50,7 +50,7 @@ def get_project_or_tag_completion(ctx, args, incomplete):
         """
         Prepend '+' to each tag suggestion.
 
-        For the `tt` targeted with the function
+        For the `xtt` targeted with the function
         get_project_or_tag_completion, a leading plus in front of a tag is
         expected. The get_tags() suggestion generation does not include those
         as it targets other subcommands.

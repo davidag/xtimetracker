@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2020 The tt Authors
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
@@ -9,8 +9,8 @@
 import pytest
 from click.testing import CliRunner
 
-from tt.timetracker import TimeTracker
-from tt.config import create_configuration
+from xtimetracker.timetracker import TimeTracker
+from xtimetracker.config import create_configuration
 
 
 @pytest.fixture

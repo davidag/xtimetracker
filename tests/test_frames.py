@@ -1,12 +1,12 @@
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2020 The tt Authors
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
 
 import arrow
 
-from tt.frames import Span, Frames, Frame
+from xtimetracker.frames import Span, Frames, Frame
 
 
 def test_span_union():

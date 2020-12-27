@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2020 The tt Authors
+# SPDX-FileCopyrightText: 2020 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
@@ -17,7 +17,7 @@ import pytest
 from io import StringIO
 from dateutil.tz import tzutc
 
-from tt.cli_utils import (
+from xtimetracker.cli_utils import (
     apply_weekday_offset,
     build_csv,
     flatten_report_for_csv,
