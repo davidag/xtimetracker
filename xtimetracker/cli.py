@@ -693,17 +693,18 @@ def log(timetracker, current, from_, to, projects, exclude_projects, tags,
         full,
     )
 
-    if 'json' in output_format:
+    if output_format == 'json':
         click.echo(frames_to_json(filtered_frames))
         return
 
-    if 'csv' in output_format:
+    if output_format == 'csv':
         click.echo(frames_to_csv(filtered_frames))
         return
 
     frames_by_day = sorted_groupby(
         filtered_frames,
-        operator.attrgetter('day'), reverse=True
+        lambda frame: frame.start.floor('day'),
+        reverse=True
     )
 
     lines = []

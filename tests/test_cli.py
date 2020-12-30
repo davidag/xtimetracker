@@ -497,6 +497,22 @@ def test_log_invalid_date(runner, timetracker, test_dt):
     assert result.exit_code != 0
 
 
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_log_one_day(runner, timetracker_df):
+    result = runner.invoke(cli.log,
+                           ['--no-pager', '-f', '2019-10-31', '-t', '2019-11-01'],
+                           obj=timetracker_df)
+    assert result.exit_code == 0
+    expected_output = [
+        "Thursday 31 October 2019 (5h 33m 21s)",
+        "\tb19b583  09:13 to 11:20   2h 07m 13s    hubble  [camera]",
+        "\tdf5d596  12:03 to 13:38   1h 35m 11s  voyager1  [generators, antenna]",
+        "\tecbfea2  14:25 to 15:01      36m 29s    hubble  [transmission, camera]",
+        "\t3b3a6b6  15:15 to 16:30   1h 14m 28s  voyager1",
+    ]
+    assert result.output.splitlines() == expected_output
+
+
 # report
 
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)
