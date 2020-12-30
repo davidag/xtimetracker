@@ -13,7 +13,7 @@ import sys
 
 import arrow
 
-from xtt.timetracker import TimeTracker
+from xtimetracker.timetracker import TimeTracker
 
 FUZZER_PROJECTS = [
     ("apollo11", ["reactor", "module", "wheels", "steering", "brakes"]),
