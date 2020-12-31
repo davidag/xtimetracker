@@ -131,7 +131,7 @@ def catch_timetracker_error(func):
 @click.pass_context
 def cli(ctx):
     """
-    x-timetracker is a tool aimed for monitoring your time.
+    xtimetracker is a tool aimed for monitoring your time.
     """
 
     # This is the main command group, needed by click in order
@@ -766,7 +766,7 @@ def log(timetracker, current, from_, to, projects, exclude_projects, tags,
 @catch_timetracker_error
 def edit(timetracker, id):
     """
-    Edit a frame.
+    Edit frames.
 
     You can specify the frame to edit by its position or by its frame id.
     For example, to edit the second-to-last frame, pass `-2` as the frame
@@ -859,12 +859,9 @@ def edit(timetracker, id):
         text = output
 
     # we reach this when we break out of the while loop above
-    if id:
-        timetracker.frames[id] = (project, start, stop, tags)
-    else:
-        timetracker.current = dict(start=start, project=project, tags=tags)
-
+    timetracker.edit(id, project, start, stop, tags)
     timetracker.save()
+
     click.echo(
         "Edited frame for project {project}{tags}, from {start} to {stop} "
         "({delta})".format(

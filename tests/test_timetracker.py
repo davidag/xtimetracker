@@ -480,3 +480,20 @@ def test_validate_inclusion_options(timetracker):
         ["project_foo", "project_bar"],
         ["project_foo", "project_bar"])
     assert timetracker._validate_inclusion_options(None, None)
+
+
+# edit
+
+def test_edit_frame(timetracker):
+    """
+    Editing an existing and completed frame runs succesfully
+    """
+    f = timetracker.add(project="test1", tags=['fuu', 'bar'], from_date=6000, to_date=7000)
+
+    timetracker.edit(f.id, "test2", f.start, f.stop, [])
+
+    assert len(timetracker.frames) == 1
+    assert timetracker.frames[0].project == "test2"
+    assert timetracker.frames[0].start == f.start
+    assert timetracker.frames[0].stop == f.stop
+    assert timetracker.frames[0].tags == []

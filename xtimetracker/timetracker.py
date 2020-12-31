@@ -9,6 +9,7 @@ import operator
 import arrow
 from collections import defaultdict
 from functools import reduce
+from typing import List
 
 from .backend import Backend
 from .config import Config
@@ -52,7 +53,7 @@ class TimeTracker:
             s |= Span(self.current['start'], arrow.now())
         return s
 
-    def add(self, project: str, from_date: arrow.Arrow, to_date: arrow.Arrow, tags):
+    def add(self, project: str, from_date: arrow.Arrow, to_date: arrow.Arrow, tags: List[str]):
         if not project:
             raise TimeTrackerError("No project given.")
         if from_date > to_date:
@@ -63,6 +64,12 @@ class TimeTracker:
 
         frame = self.frames.add(project, from_date, to_date, tags=tags)
         return frame
+
+    def edit(self, id: str, project: str, start: arrow.Arrow, stop: arrow.Arrow, tags: List[str]):
+        if id:
+            self.frames[id] = (project, start, stop, tags)
+        else:
+            self.current = dict(start=start, project=project, tags=tags)
 
     def start(self, project, tags=None, stretch=False):
         assert not self.is_started

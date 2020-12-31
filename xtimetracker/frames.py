@@ -126,7 +126,7 @@ class Frames():
         if isinstance(key, int):
             self._rows[key] = frame
         else:
-            frame = frame._replace(id=key)
+            frame.id = key
             try:
                 self._rows[self._get_index_by_id(key)] = frame
             except KeyError:
