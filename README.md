@@ -4,7 +4,9 @@
 
 ## Overview
 
-`xtimetracker` helps you manage your projects and track your time. It is a command line tool (`x`) with a simple set of commands and options. It was born as a fork of the [Watson project](https://github.com/TailorDev/Watson) and is compatible with its JSON file format.
+`xtimetracker` helps you manage your projects and track your time. It is a command line tool (`x`) with a simple set of commands and options.
+
+[It was born as a fork](https://davidalfonso.es/posts/why-and-how-to-fork-the-case-of-watson) of the [Watson project](https://github.com/TailorDev/Watson) and it maintains compatibility with its JSON file format. It aspires to be a simple, maintained, and extendable (using plugins) time tracking software.
 
 ## Installing
 
