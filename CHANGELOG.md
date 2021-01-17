@@ -6,6 +6,11 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- README mentioned invalid project/tags, also formatted with mdformat
+
 ## [0.1.0] - 2020-12-31
 
 - xtimetracker is a **fork** of [Watson](https://tailordev.github.io/Watson/) 1.8.0 and maintains compatibility with its file format

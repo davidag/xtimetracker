@@ -21,24 +21,24 @@ $ pip install xtimetracker
 Start tracking your activity via:
 
 ```console
-$ x start research +experiment-a
+$ x start research +experiment-alpha
 ```
 
-With this command, you have started a new **frame** for the *research* project with the *experiment-a* tag.
+With this command, you have started a new **frame** for the *research* project with the *experiment-alpha* tag.
 
 Now stop tracking via:
 
 ```console
 $ x stop
-Stopping project research [experiment-a], started 30 minutes ago and stopped just now. (id: 5c57b13)
+Stopping project research [experiment-alpha], started 30 minutes ago and stopped just now. (id: 5c57b13)
 ```
 
-You can view a log of your latest working sessions using the ``log`` command:
+You can view a log of your latest working sessions using the `log` command:
 
 ```console
 $ x log
 Tuesday 26 January 2020 (8m 32s)
-      ffb2a4c  13:00 to 13:08      08m 32s   world-domination  [cats]
+      ffb2a4c  13:00 to 13:08      08m 32s   research [experiment-alpha]
 ```
 
 Please note that, as the report command, the `log` command comes with projects, tags and dates filtering.
@@ -55,8 +55,8 @@ Copyright (C) 2020 David Alfonso
 
 This work is licensed under multiple licenses.
 
-* All original source code is licensed under GPL-3.0-or-later.
-* All code borrowed from `the Watson project <https://github.com/TailorDev/Watson>`_ is licensed under the MIT license.
+- All original source code is licensed under GPL-3.0-or-later.
+- All code borrowed from `the Watson project <https://github.com/TailorDev/Watson>`\_ is licensed under the MIT license.
 
 SPDX-License-Identifier: GPL-3.0-or-later AND MIT
 
