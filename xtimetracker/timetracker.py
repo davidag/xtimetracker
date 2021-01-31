@@ -81,8 +81,9 @@ class TimeTracker:
         }
         if stretch and len(self.frames) > 0:
             max_elapsed = self.config.getint('options', 'autostretch_max_elapsed_secs', 28800)
-            if arrow.now().timestamp - self.frames[-1].stop.timestamp < max_elapsed:
-                new_frame['start'] = self.frames[-1].stop
+            last_frame = max(self.frames, key=lambda f: f.stop.timestamp)
+            if arrow.now().timestamp - last_frame.stop.timestamp < max_elapsed:
+                new_frame['start'] = last_frame.stop
         if 'start' not in new_frame:
             new_frame['start'] = arrow.now()
         self._current = new_frame

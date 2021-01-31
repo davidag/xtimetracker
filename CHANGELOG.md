@@ -15,6 +15,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 - README mentioned invalid project/tags, also formatted with mdformat
 - Exception when editing current frame
 - Use local timezone in `status` command
+- Stretch latest stop date in `start` instead of latest frame
 
 ## [0.1.0] - 2020-12-31
 

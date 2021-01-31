@@ -182,6 +182,20 @@ def test_start_stretch(timetracker):
     assert timetracker.frames[-1].stop == timetracker.current['start']
 
 
+def test_start_stretch_latest_stop_date(timetracker):
+    timetracker.start('foo')
+    timetracker.stop()
+    timetracker.start('bar')
+    timetracker.stop()
+    foo = timetracker.frames[-2]
+    bar = timetracker.frames[-1]
+    bar.start = bar.start.shift(days=-1)
+    bar.stop = bar.stop.shift(days=-1)
+
+    timetracker.start('foo', stretch=True)
+    assert foo.stop == timetracker.current['start']
+
+
 # stop
 
 def test_stop_started_project(timetracker):
