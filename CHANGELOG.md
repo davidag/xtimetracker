@@ -6,7 +6,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Changelog
 
-## [Unreleased]
+## [0.1.1] - 2021-01-31
 
 ### Changed
 - Environment data directory variable set to: `XTIMETRACKER_DIR` (previously `XTT_DIR`)

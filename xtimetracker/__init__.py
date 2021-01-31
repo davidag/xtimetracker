@@ -4,4 +4,4 @@
 
 
 __author__ = "David Alfonso <developer@davidalfonso.es>"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
