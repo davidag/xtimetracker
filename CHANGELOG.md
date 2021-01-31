@@ -8,6 +8,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 ## [Unreleased]
 
+### Changed
+- Environment data directory variable set to: `XTIMETRACKER_DIR` (previously `XTT_DIR`)
+
 ### Fixed
 - README mentioned invalid project/tags, also formatted with mdformat
 

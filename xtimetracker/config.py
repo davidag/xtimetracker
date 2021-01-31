@@ -23,7 +23,7 @@ class Config(configparser.ConfigParser):
 
     def __init__(self, config_dir=None, **kwargs):
         if config_dir is None:
-            self.config_dir = os.environ.get('XTT_DIR', get_app_dir('xtimetracker'))
+            self.config_dir = os.environ.get('XTIMETRACKER_DIR', get_app_dir('xtimetracker'))
         else:
             self.config_dir = config_dir
         self.config_file = os.path.join(self.config_dir, 'config')
