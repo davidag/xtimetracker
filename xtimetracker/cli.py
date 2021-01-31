@@ -761,10 +761,10 @@ def log(timetracker, current, from_, to, projects, exclude_projects, tags,
 
 
 @cli.command(context_settings={'ignore_unknown_options': True})
-@click.argument('id', required=False, autocompletion=get_frames)
+@click.argument('frame_id', required=False, autocompletion=get_frames)
 @click.pass_obj
 @catch_timetracker_error
-def edit(timetracker, id):
+def edit(timetracker, frame_id):
     """
     Edit frames.
 
@@ -772,8 +772,8 @@ def edit(timetracker, id):
     For example, to edit the second-to-last frame, pass `-2` as the frame
     index. You can get the id of a frame with the `x log` command.
 
-    If no id or index is given, the frame defaults to the current frame (or the
-    last recorded frame, if no project is currently running).
+    If no frame id or index is given, the frame defaults to the current frame
+    (or the last recorded frame, if no project is currently running).
 
     The editor used is determined by the `VISUAL` or `EDITOR` environment
     variables (in that order) and defaults to `notepad` on Windows systems and
@@ -784,30 +784,28 @@ def edit(timetracker, id):
     datetime_format = '{} {}'.format(date_format, time_format)
     local_tz = tz.tzlocal()
 
-    if id:
-        frame = get_frame_from_argument(timetracker, id)
-        id = frame.id
+    if frame_id:
+        frame = get_frame_from_argument(timetracker, frame_id)
+        frame_id = frame.id
     elif timetracker.is_started:
         frame = Frame(timetracker.current['start'], None,
                       timetracker.current['project'], None,
                       timetracker.current['tags'])
     elif timetracker.frames:
         frame = timetracker.frames[-1]
-        id = frame.id
+        frame_id = frame.id
     else:
         raise click.ClickException(
             style('error', "No frames recorded yet. It's time to create your "
                   "first one!"))
 
     data = {
-        # -> Arrow.format() ret string repr of Arrow object
         'start': frame.start.format(datetime_format),
         'project': frame.project,
         'tags': frame.tags,
     }
 
-    if id:
-        # -> Arrow.format() ret string repr of Arrow object
+    if frame_id:
         data['stop'] = frame.stop.format(datetime_format)
 
     text = json.dumps(data, indent=4, sort_keys=True, ensure_ascii=False)
@@ -830,7 +828,7 @@ def edit(timetracker, id):
             tags = data['tags']
             # -> arrow.get() in local tz
             start = arrow.get(data['start'], datetime_format, tzinfo=local_tz)
-            stop = arrow.get(data['stop'], datetime_format, tzinfo=local_tz) if id else None
+            stop = arrow.get(data['stop'], datetime_format, tzinfo=local_tz) if frame_id else None
             # if start time of the project is not before end time
             #  raise ValueException
             if not timetracker.is_started and start > stop:
@@ -859,7 +857,7 @@ def edit(timetracker, id):
         text = output
 
     # we reach this when we break out of the while loop above
-    timetracker.edit(id, project, start, stop, tags)
+    timetracker.edit(frame_id, project, start, stop, tags)
     timetracker.save()
 
     click.echo(

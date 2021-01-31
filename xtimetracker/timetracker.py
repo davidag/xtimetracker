@@ -65,11 +65,11 @@ class TimeTracker:
         frame = self.frames.add(project, from_date, to_date, tags=tags)
         return frame
 
-    def edit(self, id: str, project: str, start: arrow.Arrow, stop: arrow.Arrow, tags: List[str]):
-        if id:
-            self.frames[id] = (project, start, stop, tags)
+    def edit(self, frame_id: str, project: str, start: arrow.Arrow, stop: arrow.Arrow, tags: List[str]):
+        if frame_id:
+            self.frames[frame_id] = (project, start, stop, tags)
         else:
-            self.current = dict(start=start, project=project, tags=tags)
+            self._current = dict(start=start, project=project, tags=tags)
 
     def start(self, project, tags=None, stretch=False):
         assert not self.is_started
