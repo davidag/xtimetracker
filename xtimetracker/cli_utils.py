@@ -11,6 +11,7 @@ import itertools
 import json
 import operator
 import os
+from dateutil import tz
 from io import StringIO
 
 import arrow
@@ -45,6 +46,7 @@ def style(name, element):
         'time': {'fg': 'green'},
         'error': {'fg': 'red'},
         'date': {'fg': 'cyan'},
+        'datetime': {'fg': 'cyan'},
         'short_id': _style_short_id,
         'id': {'fg': 'white'}
     }
@@ -81,6 +83,16 @@ def format_timedelta(delta: datetime.timedelta):
     stems.append('{:02}s'.format(seconds))
 
     return ('-' if neg else '') + ' '.join(stems)
+
+
+def format_date(date: arrow.Arrow) -> str:
+    datetime_format = 'YYYY-MM-DD HH:mm:ss'
+    return date.format(datetime_format)
+
+
+def parse_date(date: str) -> arrow.Arrow:
+    datetime_format = 'YYYY-MM-DD HH:mm:ss'
+    return arrow.get(date, datetime_format, tzinfo=tz.tzlocal())
 
 
 def options(opt_list):
@@ -135,7 +147,6 @@ def get_last_frame_from_project(timetracker: TimeTracker, project: str) -> Frame
     for f in timetracker.frames.filter(projects=[project]):
         if not last_frame:
             last_frame = f
-        # -> arrow object comparison
         elif last_frame.start < f.start:
             last_frame = f
     return last_frame
@@ -153,11 +164,8 @@ def get_start_time_for_period(period):
     weekday = now.weekday()
 
     if period == 'day':
-        # -> Constructor equivalent to datetime()
         start_time = arrow.Arrow(year, month, day)
     elif period == 'week':
-        # -> Arrow.fromdate()
-        # -> Arrow.shift(days=) to go back some number of days!
         start_time = arrow.Arrow.fromdate(now.shift(days=-weekday).date())
     elif period == 'month':
         start_time = arrow.Arrow(year, month, 1)

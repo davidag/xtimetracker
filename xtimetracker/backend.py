@@ -4,6 +4,7 @@
 
 import os
 import arrow
+from dateutil import tz
 
 from .config import Config
 from .frames import Frames
@@ -55,7 +56,7 @@ class Backend:
 
         self._last_state = {
             'project': raw_state['project'],
-            'start': arrow.get(raw_state['start']),
+            'start': arrow.get(raw_state['start'], tzinfo=tz.tzlocal()),
             'tags': raw_state.get('tags') or []
         }
         return self._last_state

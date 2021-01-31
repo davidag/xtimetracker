@@ -31,6 +31,7 @@ from .cli_utils import (
     build_json,
     create_timetracker,
     flatten_report_for_csv,
+    format_date,
     format_timedelta,
     frames_to_csv,
     frames_to_json,
@@ -39,6 +40,7 @@ from .cli_utils import (
     get_start_time_for_period,
     is_current_tracking_data,
     style,
+    parse_date,
     parse_project,
     parse_tags,
 )
@@ -297,16 +299,11 @@ def status(timetracker, project, tags, elapsed):
         ))
         return
 
-    datefmt = timetracker.config.get('options', 'date_format', '%Y.%m.%d')
-    timefmt = timetracker.config.get('options', 'time_format', '%H:%M:%S%z')
-    click.echo("Project {}{} started {} ({} {})".format(
+    click.echo("Project {}{} started {} ({})".format(
         style('project', current['project']),
         (" " if current['tags'] else "") + style('tags', current['tags']),
-        # -> humanize() start date
         style('time', current['start'].humanize()),
-        # -> Arrow.strftime() to output time formatted with user preferences...
-        style('date', current['start'].strftime(datefmt)),
-        style('time', current['start'].strftime(timefmt))
+        style('datetime', format_date(current['start']))
     ))
 
 
@@ -779,11 +776,6 @@ def edit(timetracker, frame_id):
     variables (in that order) and defaults to `notepad` on Windows systems and
     to `vim`, `nano`, or `vi` (first one found) on all other systems.
     """
-    date_format = 'YYYY-MM-DD'
-    time_format = 'HH:mm:ss'
-    datetime_format = '{} {}'.format(date_format, time_format)
-    local_tz = tz.tzlocal()
-
     if frame_id:
         frame = get_frame_from_argument(timetracker, frame_id)
         frame_id = frame.id
@@ -800,13 +792,13 @@ def edit(timetracker, frame_id):
                   "first one!"))
 
     data = {
-        'start': frame.start.format(datetime_format),
+        'start': format_date(frame.start),
         'project': frame.project,
         'tags': frame.tags,
     }
 
     if frame_id:
-        data['stop'] = frame.stop.format(datetime_format)
+        data['stop'] = format_date(frame.stop)
 
     text = json.dumps(data, indent=4, sort_keys=True, ensure_ascii=False)
 
@@ -826,9 +818,8 @@ def edit(timetracker, frame_id):
             data = json.loads(output)
             project = data['project']
             tags = data['tags']
-            # -> arrow.get() in local tz
-            start = arrow.get(data['start'], datetime_format, tzinfo=local_tz)
-            stop = arrow.get(data['stop'], datetime_format, tzinfo=local_tz) if frame_id else None
+            start = parse_date(data['start'])
+            stop = parse_date(data['stop']) if frame_id else None
             # if start time of the project is not before end time
             #  raise ValueException
             if not timetracker.is_started and start > stop:
@@ -868,11 +859,11 @@ def edit(timetracker, frame_id):
             tags=(" " if tags else "") + style('tags', tags),
             start=style(
                 'time',
-                start.to(local_tz).format(time_format)
+                start.to(tz.tzlocal()).format("HH:mm:ss")
             ),
             stop=style(
                 'time',
-                stop.to(local_tz).format(time_format) if stop else '-'
+                stop.to(tz.tzlocal()).format("HH:mm:ss") if stop else '-'
             )
         )
     )
