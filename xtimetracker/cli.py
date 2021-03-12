@@ -179,13 +179,14 @@ def help(ctx, command):
 @catch_timetracker_error
 def start(ctx, timetracker: TimeTracker, stretch, restart, args):
     """
-    Start monitoring time for the given project.
-    You can add tags indicating more specifically what you are working on with
-    `+tag`.
+    Start tracking an activity associated to a project.
 
-    If there is an already running project and the configuration option
+    You can add tags to categorize more specifically what you are working on with
+    tags adding any number of `+tag`.
+
+    If there is an already running activity and the configuration option
     `options.stop_on_start` is true, it will be stopped before the new
-    project is started.
+    activity is started.
     """
     stop_flag = timetracker.config.getboolean('options', 'stop_on_start')
     restart_flag = restart or timetracker.config.getboolean('options', 'restart_on_start')
