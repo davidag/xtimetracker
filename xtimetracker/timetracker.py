@@ -26,7 +26,7 @@ class TimeTracker:
         self.config = config
         self._current = None
         self._frames = None
-        self._backend = Backend(config)
+        self._backend = Backend(config.config_dir)
 
     def save(self):
         self._backend.save(self._current, self._frames)

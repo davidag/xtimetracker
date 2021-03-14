@@ -18,13 +18,22 @@ import arrow
 import click
 from click.exceptions import UsageError
 
-from .timetracker import TimeTracker
-from .frames import Frame
-from .config import Config
+from ..timetracker import TimeTracker
+from ..frames import Frame
+from ..config import Config
 
 
 def create_timetracker(config: Config) -> TimeTracker:
     return TimeTracker(config=config)
+
+
+def create_configuration(contents=None, config_dir=None) -> Config:
+    if config_dir is None:
+        config_dir = os.environ.get('XTIMETRACKER_DIR', click.get_app_dir('xtimetracker'))
+
+    c = Config(config_dir=config_dir, interpolation=None)
+    c.reload(contents)
+    return c
 
 
 def style(name, element):

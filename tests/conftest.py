@@ -10,7 +10,7 @@ import pytest
 from click.testing import CliRunner
 
 from xtimetracker.timetracker import TimeTracker
-from xtimetracker.config import create_configuration
+from xtimetracker.cli.utils import create_configuration
 
 
 @pytest.fixture

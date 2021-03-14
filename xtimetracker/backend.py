@@ -6,7 +6,6 @@ import os
 import arrow
 from dateutil import tz
 
-from .config import Config
 from .frames import Frames
 from .file_utils import safe_save, json_writer, load_json
 from .utils import TimeTrackerError
@@ -16,10 +15,9 @@ class Backend:
     """
     Handles file I/O to save/load data from a backend (currently filesystem regular files).
     """
-    def __init__(self, config: Config):
-        self._config = config
-        self._frames_file = os.path.join(self._config.config_dir, 'frames')
-        self._state_file = os.path.join(self._config.config_dir, 'state')
+    def __init__(self, data_dir: str):
+        self._frames_file = os.path.join(data_dir, 'frames')
+        self._state_file = os.path.join(data_dir, 'state')
         self._last_state = None
 
     def save(self, state: dict, frames: Frames):

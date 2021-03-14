@@ -8,7 +8,8 @@
 
 import pytest
 
-from xtimetracker.config import create_configuration, ConfigurationError
+from xtimetracker.cli.utils import create_configuration
+from xtimetracker.config import ConfigurationError
 
 
 def test_config_dir(config):

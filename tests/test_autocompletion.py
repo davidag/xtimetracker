@@ -11,7 +11,7 @@ from argparse import Namespace
 
 import pytest
 
-from xtimetracker.autocompletion import (
+from xtimetracker.cli.autocompletion import (
     get_frames,
     get_project_or_tag_completion,
     get_projects,

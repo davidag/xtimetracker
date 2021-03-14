@@ -13,22 +13,22 @@ import arrow
 import click
 from dateutil import tz
 
-from . import __version__
+from .. import __version__
 from .autocompletion import (
     get_frames,
     get_project_or_tag_completion,
     get_projects,
     get_tags,
 )
-from .config import create_configuration
-from .file_utils import safe_save
-from .frames import Frame
-from .timetracker import TimeTrackerError, TimeTracker
-from .cli_utils import (
+from ..file_utils import safe_save
+from ..frames import Frame
+from ..timetracker import TimeTrackerError, TimeTracker
+from .utils import (
     adjusted_span,
     apply_weekday_offset,
     build_csv,
     build_json,
+    create_configuration,
     create_timetracker,
     flatten_report_for_csv,
     format_date,
@@ -44,7 +44,7 @@ from .cli_utils import (
     parse_project,
     parse_tags,
 )
-from .utils import sorted_groupby
+from ..utils import sorted_groupby
 
 
 class MutuallyExclusiveOption(click.Option):

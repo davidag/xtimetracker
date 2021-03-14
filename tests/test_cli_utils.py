@@ -17,7 +17,7 @@ import pytest
 from io import StringIO
 from dateutil.tz import tzutc
 
-from xtimetracker.cli_utils import (
+from xtimetracker.cli.utils import (
     apply_weekday_offset,
     build_csv,
     flatten_report_for_csv,

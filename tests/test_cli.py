@@ -13,7 +13,7 @@ from dateutil.tz import tzlocal
 import arrow
 import pytest
 
-from xtimetracker import cli
+from xtimetracker.cli import cli
 
 from . import TEST_FIXTURE_DIR
 

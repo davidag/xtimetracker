@@ -5,8 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 from functools import wraps
-from .config import create_configuration
-from .cli_utils import create_timetracker, parse_tags
+from .utils import create_configuration, create_timetracker, parse_tags
 
 
 def patch_click_ctx_object(func):
