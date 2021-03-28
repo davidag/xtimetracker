@@ -7,7 +7,7 @@
 import datetime
 import json
 import operator
-from functools import reduce, wraps
+from functools import reduce
 
 import arrow
 import click
@@ -22,12 +22,12 @@ from .autocompletion import (
 )
 from ..file_utils import safe_save
 from ..frames import Frame
-from ..timetracker import TimeTrackerError, TimeTracker
 from .utils import (
     adjusted_span,
     apply_weekday_offset,
     build_csv,
     build_json,
+    catch_timetracker_error,
     create_configuration,
     create_timetracker,
     flatten_report_for_csv,
@@ -118,16 +118,6 @@ class DateTimeParamType(click.ParamType):
 DateTime = DateTimeParamType()
 
 
-def catch_timetracker_error(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except TimeTrackerError as e:
-            raise click.ClickException(style('error', str(e)))
-    return wrapper
-
-
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
@@ -145,71 +135,6 @@ def cli(ctx):
 
     if ctx.invoked_subcommand is None:
         ctx.invoke(status)
-
-
-@cli.command()
-@click.option('-s', '--stretch', is_flag=True, default=False,
-              help=("Stretch start time to continue after last tracked activity."))
-@click.option('-r', '--restart', is_flag=True, default=False,
-              help="Restart last frame or last project frame if a project "
-                   "is provided.")
-@click.argument('args', nargs=-1,
-                autocompletion=get_project_or_tag_completion)
-@click.pass_obj
-@click.pass_context
-@catch_timetracker_error
-def start(ctx, timetracker: TimeTracker, stretch, restart, args):
-    """
-    Start tracking an activity associated to a project.
-
-    You can add tags to categorize more specifically what you are working on with
-    tags adding any number of `+tag`.
-
-    If there is an already running activity and the configuration option
-    `options.stop_on_start` is true, it will be stopped before the new
-    activity is started.
-    """
-    stop_flag = timetracker.config.getboolean('options', 'stop_on_start')
-    restart_flag = restart or timetracker.config.getboolean('options', 'restart_on_start')
-    stretch_flag = stretch or timetracker.config.getboolean('options', 'autostretch_on_start')
-
-    project = parse_project(args)
-    tags = parse_tags(args)
-
-    if not project and not restart_flag:
-        raise click.ClickException("No project given.")
-
-    if restart_flag and timetracker.is_started:
-        tags.extend(timetracker.current['tags'])
-        if not project:
-            project = timetracker.current['project']
-
-    if restart_flag and not timetracker.is_started:
-        if project:
-            frame = get_last_frame_from_project(timetracker, project)
-        else:
-            frame = get_frame_from_argument(timetracker, "-1")
-        if frame:
-            project = frame.project
-            tags.extend(frame.tags)
-
-    if timetracker.is_started:
-        if stop_flag and not is_current_tracking_data(timetracker, project, tags):
-            ctx.invoke(stop)
-        else:
-            raise click.ClickException(
-                style('error', "Project {} is already started with tags '{}'".format(
-                    timetracker.current['project'], ", ".join(timetracker.current["tags"]))
-                )
-            )
-
-    current = timetracker.start(project, tags, stretch_flag)
-    click.echo("Starting project {}{} at {}".format(
-        style('project', project),
-        (" " if current['tags'] else "") + style('tags', current['tags']),
-        style('time', "{:HH:mm}".format(current['start']))
-    ))
-    timetracker.save()
 
 
 @cli.command(context_settings={'ignore_unknown_options': True})

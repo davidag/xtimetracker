@@ -12,15 +12,26 @@ import json
 import operator
 import os
 from dateutil import tz
+from functools import wraps
 from io import StringIO
 
 import arrow
 import click
 from click.exceptions import UsageError
 
-from ..timetracker import TimeTracker
+from ..timetracker import TimeTrackerError, TimeTracker
 from ..frames import Frame
 from ..config import Config
+
+
+def catch_timetracker_error(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except TimeTrackerError as e:
+            raise click.ClickException(style('error', str(e)))
+    return wrapper
 
 
 def create_timetracker(config: Config) -> TimeTracker:
