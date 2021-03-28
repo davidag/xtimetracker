@@ -128,7 +128,10 @@ def catch_timetracker_error(func):
     return wrapper
 
 
-@click.group(invoke_without_command=True)
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+
+@click.group(invoke_without_command=True, context_settings=CONTEXT_SETTINGS)
 @click.version_option(version=__version__, prog_name='x')
 @click.pass_context
 def cli(ctx):
@@ -142,28 +145,6 @@ def cli(ctx):
 
     if ctx.invoked_subcommand is None:
         ctx.invoke(status)
-
-
-@cli.command()
-@click.argument('command', required=False)
-@click.pass_context
-def help(ctx, command):
-    """
-    Display help information
-    """
-    if not command:
-        click.echo(ctx.parent.get_help())
-        return
-
-    cmd = cli.get_command(ctx, command)
-
-    if not cmd:
-        raise click.ClickException("No such command: {}".format(command))
-
-    # the passed context is that of the 'help' command, which would
-    # show up in the Usage: ... - message. Create the proper context:
-    cmd_context = click.Context(cmd, parent=ctx.parent, info_name=cmd.name)
-    click.echo(cmd.get_help(cmd_context))
 
 
 @cli.command()

@@ -347,18 +347,6 @@ def test_start_restart_config_current_project_implicit_same_tags(runner, timetra
     assert timetracker.current['project'] == 'project-1'
 
 
-# help
-
-@pytest.mark.parametrize('cmd_name', ['add', 'start', 'stop'])
-def test_show_command_help(runner, timetracker, cmd_name):
-    result = runner.invoke(
-         cli.help,
-         [cmd_name],
-         obj=timetracker)
-    assert result.exit_code == 0
-    assert result.output.startswith('Usage: ' + cmd_name)
-
-
 # add
 
 @pytest.mark.parametrize('test_dt,expected', VALID_DATES_DATA)

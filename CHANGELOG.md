@@ -6,6 +6,11 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Changelog
 
+## [x.y.z] - yyyy-mm-dd
+
+### Changed
+- Obtain command help also with `-h` and remove `help` command
+
 ## [0.1.1] - 2021-01-31
 
 ### Changed
