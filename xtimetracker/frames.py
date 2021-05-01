@@ -49,10 +49,14 @@ class Frame:
         tags = copy(self.tags) if self.tags is not None else []
         return Frame(start, stop, self.project, self.id, tags, self.updated_at)
 
-    def __getitem__(self, index):
-        """ Make Frame iterable, to be able to do Frame(*frame) """
+    def __getitem__(self, key):
+        # allow access by key as if this was a dictionary
+        if key in self.__slots__:
+            return getattr(self, key)
+
+        # allow sequencial access
         try:
-            return getattr(self, self.__slots__[index])
+            return getattr(self, self.__slots__[key])
         except KeyError:
             raise IndexError
 

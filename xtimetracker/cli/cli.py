@@ -37,7 +37,6 @@ from .utils import (
     frames_to_json,
     get_frame_from_argument,
     get_start_time_for_period,
-    is_current_tracking_data,
     style,
     parse_date,
     parse_project,

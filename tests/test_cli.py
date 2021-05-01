@@ -212,9 +212,8 @@ def test_start_restart_running_frame(runner, timetracker):
     assert result.exit_code == 0
     assert len(timetracker.frames) == 0
     result = runner.invoke(start, ['-r'], obj=timetracker)
-    assert result.exit_code == 1
-    assert 'already started' in result.output
-    assert len(timetracker.frames) == 0
+    assert result.exit_code == 0
+    assert len(timetracker.frames) == 1
     assert timetracker.current['project'] == 'project-1'
     assert {'mytag'} == set(timetracker.current['tags'])
 
@@ -232,7 +231,7 @@ def test_start_restart_running_frame_plus_tags(runner, timetracker):
     assert set(['tag1', 'tag2', 'a tag']) == set(timetracker.current['tags'])
 
 
-def test_start_restart_last_frame(runner, timetracker):
+def test_start_restart_latest_frame(runner, timetracker):
     timetracker.config.set('options', 'stop_on_start', "false")
     result = runner.invoke(start, 'project-1', obj=timetracker)
     assert result.exit_code == 0
@@ -321,9 +320,9 @@ def test_start_restart_config_current_project_explicit(runner, timetracker):
     result = runner.invoke(start, ['project-1', '+tag1', '+tag2'], obj=timetracker)
     assert result.exit_code == 0
     result = runner.invoke(start, ['project-1'], obj=timetracker)
-    assert result.exit_code == 1
-    assert 'already started' in result.output
+    assert result.exit_code == 0
     assert timetracker.current['project'] == 'project-1'
+    assert set(['tag1', 'tag2']) == set(timetracker.current['tags'])
 
 
 def test_start_restart_config_current_project_and_tags_implicit(runner, timetracker):
@@ -332,9 +331,9 @@ def test_start_restart_config_current_project_and_tags_implicit(runner, timetrac
     result = runner.invoke(start, ['project-1', '+tag1'], obj=timetracker)
     assert result.exit_code == 0
     result = runner.invoke(start, [], obj=timetracker)
-    assert result.exit_code == 1
-    assert 'already started' in result.output
+    assert result.exit_code == 0
     assert timetracker.current['project'] == 'project-1'
+    assert ['tag1'] == timetracker.current['tags']
 
 
 def test_start_restart_config_current_project_implicit_same_tags(runner, timetracker):
@@ -343,10 +342,29 @@ def test_start_restart_config_current_project_implicit_same_tags(runner, timetra
     result = runner.invoke(start, ['project-1', '+tag1'], obj=timetracker)
     assert result.exit_code == 0
     result = runner.invoke(start, ['+tag1'], obj=timetracker)
-    assert result.exit_code == 1
-    assert 'already started' in result.output
+    assert result.exit_code == 0
     assert timetracker.current['project'] == 'project-1'
+    assert ['tag1'] == timetracker.current['tags']
 
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_start_restart_latest_frame(runner, timetracker_df):
+    timetracker_df.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(start, ['hubble', '-r'], obj=timetracker_df)
+    assert result.exit_code == 0
+    assert timetracker_df.current['project'] == 'hubble'
+    assert {'transmission', 'camera'} == set(timetracker_df.current['tags'])
+
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_start_restart_latest_frame_from_non_running_project(runner, timetracker_df):
+    timetracker_df.config.set('options', 'stop_on_start', "true")
+    result = runner.invoke(start, ['voyager1', '+lens', '+reactor'], obj=timetracker_df)
+    assert result.exit_code == 0
+    result = runner.invoke(start, ['hubble', '-r'], obj=timetracker_df)
+    assert result.exit_code == 0
+    assert timetracker_df.current['project'] == 'hubble'
+    assert {'transmission', 'camera'} == set(timetracker_df.current['tags'])
 
 # add
 

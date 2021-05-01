@@ -15,7 +15,6 @@ from .utils import (
     catch_timetracker_error,
     get_frame_from_argument,
     get_start_time_for_period,
-    is_current_tracking_data,
     style,
     parse_project,
     parse_tags,
@@ -36,7 +35,7 @@ if TYPE_CHECKING:
 @click.pass_obj
 @click.pass_context
 @catch_timetracker_error
-def start(ctx, timetracker: TimeTracker, stretch, restart, args):
+def start(ctx, tt: TimeTracker, stretch, restart, args):
     """
     Start tracking an activity associated to a project.
 
@@ -47,46 +46,56 @@ def start(ctx, timetracker: TimeTracker, stretch, restart, args):
     `options.stop_on_start` is true, it will be stopped before the new
     activity is started.
     """
-    stop_flag = timetracker.config.getboolean('options', 'stop_on_start')
-    restart_flag = restart or timetracker.config.getboolean('options', 'restart_on_start')
-    stretch_flag = stretch or timetracker.config.getboolean('options', 'autostretch_on_start')
+    stop_flag = tt.config.getboolean('options', 'stop_on_start')
+    restart_flag = restart or tt.config.getboolean('options', 'restart_on_start')
+    stretch_flag = stretch or tt.config.getboolean('options', 'autostretch_on_start')
 
     project = parse_project(args)
     tags = parse_tags(args)
 
+    # check that we can obtain a project to start
     if not project and not restart_flag:
         raise click.ClickException("No project given.")
 
-    if restart_flag and timetracker.is_started:
-        tags.extend(timetracker.current['tags'])
-        if not project:
-            project = timetracker.current['project']
-
-    if restart_flag and not timetracker.is_started:
-        if project:
-            frame = timetracker.get_latest_frame(project)
-        else:
-            frame = get_frame_from_argument(timetracker, "-1")
-        if frame:
-            project = frame.project
-            tags.extend(frame.tags)
-
-    if timetracker.is_started:
-        if stop_flag and not is_current_tracking_data(timetracker, project, tags):
-            ctx.invoke(stop)
-        else:
-            raise click.ClickException(
-                style('error', "Project {} is already started with tags '{}'".format(
-                    timetracker.current['project'], ", ".join(timetracker.current["tags"]))
-                )
+    # check that we can stop the activity in progress (if any)
+    if tt.is_started and not stop_flag:
+        raise click.ClickException(
+            style('error', "Project {} is already started with tags '{}'".format(
+                tt.current["project"], ", ".join(tt.current["tags"]))
             )
+        )
 
-    current = timetracker.start(project, tags, stretch_flag)
+    # project is provided and restart is true
+    if project and restart_flag:
+        # obtain the tags from the last frame logged to the project
+        if tt.is_started and tt.current["project"] == project:
+            tags += tt.current["tags"]
+        else:
+            frame = tt.get_latest_frame(project)
+            tags += frame["tags"] if frame else []
+
+    # no project provided but we want to restart the latest active frame
+    if not project and restart_flag:
+        if tt.is_started:
+            project = tt.current["project"]
+            tags += tt.current["tags"]
+        else:
+            frame = get_frame_from_argument(tt, "-1")
+            if frame:
+                project = frame["project"]
+                tags += frame["tags"]
+            else:
+                raise click.ClickException("No project to restart.")
+
+    if tt.is_started:
+        ctx.invoke(stop)
+
+    current = tt.start(project, tags, stretch_flag)
+
     click.echo("Starting project {}{} at {}".format(
         style('project', project),
         (" " if current['tags'] else "") + style('tags', current['tags']),
         style('time', "{:HH:mm}".format(current['start']))
     ))
-    timetracker.save()
 
-
+    tt.save()

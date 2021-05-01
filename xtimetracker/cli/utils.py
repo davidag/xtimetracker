@@ -14,6 +14,7 @@ import os
 from dateutil import tz
 from functools import wraps
 from io import StringIO
+from typing import List
 
 import arrow
 import click
@@ -186,11 +187,6 @@ def get_start_time_for_period(period):
     return start_time
 
 
-def is_current_tracking_data(timetracker: TimeTracker, project, tags):
-    return (timetracker.current['project'] == project and
-            set(timetracker.current['tags']) == set(tags))
-
-
 def apply_weekday_offset(start_time: arrow.Arrow, week_start: str) -> arrow.Arrow:
     """
     Apply the offset required to move the start date `start_time` of a week
@@ -209,7 +205,7 @@ def apply_weekday_offset(start_time: arrow.Arrow, week_start: str) -> arrow.Arro
     return start_time.shift(days=offset)
 
 
-def parse_project(values_list):
+def parse_project(values_list: List[str]) -> str:
     """
     Return a string with the project name.
 
@@ -220,7 +216,7 @@ def parse_project(values_list):
     )
 
 
-def parse_tags(values_list):
+def parse_tags(values_list: List[str]) -> List[str]:
     """
     Return a list of tags parsed from the input values list.
 
