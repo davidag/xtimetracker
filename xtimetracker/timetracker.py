@@ -47,6 +47,17 @@ class TimeTracker:
     def is_started(self):
         return self.current
 
+    def get_latest_frame(self, project: str) -> dict:
+        last_frame = None
+        # frames are returned in the order they were added, not by date, that's why we
+        # have to iterate over all of them.
+        for f in self.frames.filter(projects=[project]):
+            if not last_frame:
+                last_frame = f
+            elif last_frame.start < f.start:
+                last_frame = f
+        return last_frame
+
     def full_span(self, include_current: bool = False) -> Span:
         s = self.frames.span
         if include_current and self.is_started:

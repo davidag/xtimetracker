@@ -14,7 +14,6 @@ from .cli import cli, stop
 from .utils import (
     catch_timetracker_error,
     get_frame_from_argument,
-    get_last_frame_from_project,
     get_start_time_for_period,
     is_current_tracking_data,
     style,
@@ -65,7 +64,7 @@ def start(ctx, timetracker: TimeTracker, stretch, restart, args):
 
     if restart_flag and not timetracker.is_started:
         if project:
-            frame = get_last_frame_from_project(timetracker, project)
+            frame = timetracker.get_latest_frame(project)
         else:
             frame = get_frame_from_argument(timetracker, "-1")
         if frame:

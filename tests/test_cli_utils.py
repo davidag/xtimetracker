@@ -24,7 +24,6 @@ from xtimetracker.cli.utils import (
     frames_to_csv,
     frames_to_json,
     get_start_time_for_period,
-    get_last_frame_from_project,
     parse_project,
     parse_tags,
     json_encoder,
@@ -216,15 +215,3 @@ def test_json_encoder():
 
     now = arrow.utcnow()
     assert json_encoder(now) == now.for_json()
-
-
-# get_last_frame_from_project
-
-@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-def test_get_last_frame_from_project(timetracker_df):
-    assert get_last_frame_from_project(timetracker_df,
-                                       "invalid_project") is None
-
-    frame = get_last_frame_from_project(timetracker_df, "hubble")
-    assert frame.project == "hubble"
-    assert set(frame.tags) == {"transmission", "camera"}

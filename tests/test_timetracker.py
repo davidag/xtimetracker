@@ -15,6 +15,8 @@ import pytest
 from xtimetracker.timetracker import TimeTracker
 from xtimetracker.utils import TimeTrackerError
 
+from . import TEST_FIXTURE_DIR
+
 
 @pytest.fixture
 def json_mock(mocker):
@@ -511,3 +513,13 @@ def test_edit_frame(timetracker):
     assert timetracker.frames[0].start == f.start
     assert timetracker.frames[0].stop == f.stop
     assert timetracker.frames[0].tags == []
+
+# get_latest_frame
+
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_get_last_frame_from_project(timetracker_df):
+    assert timetracker_df.get_latest_frame("invalid_project") is None
+
+    frame = timetracker_df.get_latest_frame("hubble")
+    assert frame.project == "hubble"
+    assert set(frame.tags) == {"transmission", "camera"}

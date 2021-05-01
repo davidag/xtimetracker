@@ -159,19 +159,6 @@ def get_frame_from_argument(timetracker: TimeTracker, arg):
         )
 
 
-# [refactor] - get_last_frame_from_project: uses? demeter? move into timetracker?
-def get_last_frame_from_project(timetracker: TimeTracker, project: str) -> Frame:
-    if project not in timetracker.projects():
-        return None
-    last_frame = None
-    for f in timetracker.frames.filter(projects=[project]):
-        if not last_frame:
-            last_frame = f
-        elif last_frame.start < f.start:
-            last_frame = f
-    return last_frame
-
-
 def get_start_time_for_period(period):
     # Using now() from datetime instead of arrow for mocking compatibility.
     now = arrow.Arrow.fromdatetime(datetime.datetime.now())
