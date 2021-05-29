@@ -126,6 +126,7 @@ def cli(ctx):
     """
     xtimetracker is a tool aimed for monitoring your time.
     """
+    from .status import status
 
     # This is the main command group, needed by click in order
     # to handle the subcommands
@@ -133,51 +134,6 @@ def cli(ctx):
 
     if ctx.invoked_subcommand is None:
         ctx.invoke(status)
-
-
-@cli.command(hidden=True)
-@click.option("-p", "--project", is_flag=True, help="only output project")
-@click.option("-t", "--tags", is_flag=True, help="only show tags")
-@click.option("-e", "--elapsed", is_flag=True, help="only show time elapsed")
-@click.pass_obj
-@catch_timetracker_error
-def status(timetracker, project, tags, elapsed):
-    """
-    Display the currently recorded project.
-
-    The displayed date and time format can be configured with options
-    `options.date_format` and `options.time_format`.
-    """
-    if not timetracker.is_started:
-        click.echo("No project started.")
-        return
-
-    current = timetracker.current
-
-    if project:
-        click.echo(
-            "{}".format(
-                style("project", current["project"]),
-            )
-        )
-        return
-
-    if tags:
-        click.echo("{}".format(style("tags", current["tags"])))
-        return
-
-    if elapsed:
-        click.echo("{}".format(style("time", current["start"].humanize())))
-        return
-
-    click.echo(
-        "Project {}{} started {} ({})".format(
-            style("project", current["project"]),
-            (" " if current["tags"] else "") + style("tags", current["tags"]),
-            style("time", current["start"].humanize()),
-            style("datetime", format_date(current["start"])),
-        )
-    )
 
 
 @cli.command(context_settings={"ignore_unknown_options": True})

@@ -5,3 +5,4 @@
 from . import cli  # noqa
 from .start import start  # noqa
 from .stop import stop  # noqa
+from .status import status  # noqa
