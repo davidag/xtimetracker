@@ -8,8 +8,15 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 ## [x.y.z] - yyyy-mm-dd
 
+### Added
+- Support generating `fish` autocompletion script with `make fish`
+
 ### Changed
 - Obtain command help also with `-h` and remove `help` command
+
+### Fixed
+- Restart using expected tags
+- Allow restart using running project
 
 ## [0.1.1] - 2021-01-31
 
