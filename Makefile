@@ -1,4 +1,4 @@
-.PHONY: deps
+.PHONY: deps format lint tox bash zsh fish
 
 deps:  ## Install development dependencies
 	python -m pip install --upgrade pip
@@ -12,6 +12,9 @@ deps:  ## Install development dependencies
 		pytest-datafiles \
 		pytest-mock \
 		tox
+
+format:  ## Format python files with black
+	python -m black .
 
 lint:  ## Lint and static-check
 	python -m flake8 xtimetracker tests
