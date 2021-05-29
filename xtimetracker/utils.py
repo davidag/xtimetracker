@@ -18,9 +18,11 @@ def deduplicate(sequence):
 
     Leaves the input sequence unaltered.
     """
-    return [element
-            for index, element in enumerate(sequence)
-            if element not in sequence[:index]]
+    return [
+        element
+        for index, element in enumerate(sequence)
+        if element not in sequence[:index]
+    ]
 
 
 def sorted_groupby(iterator, key, reverse=False):

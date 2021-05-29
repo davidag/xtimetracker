@@ -13,7 +13,7 @@ from .utils import TimeTrackerError
 
 
 class Frame:
-    __slots__ = ('start', 'stop', 'project', 'id', 'tags', 'updated_at')
+    __slots__ = ("start", "stop", "project", "id", "tags", "updated_at")
 
     def __init__(self, start, stop, project, id, tags=None, updated_at=None):
         try:
@@ -30,8 +30,8 @@ class Frame:
         except (ValueError, TypeError) as e:
             raise TimeTrackerError("Error converting date: {}".format(e))
 
-        self.start = start.to('local')
-        self.stop = stop.to('local')
+        self.start = start.to("local")
+        self.stop = stop.to("local")
         self.project = project
         self.id = id
         self.tags = [] if tags is None else tags
@@ -73,8 +73,8 @@ class Frame:
         return self.start >= other.start
 
 
-class Span():
-    def __init__(self, start, stop, timeframe='day'):
+class Span:
+    def __init__(self, start, stop, timeframe="day"):
         self.timeframe = timeframe
         self.start = start.floor(self.timeframe)
         self.stop = stop.ceil(self.timeframe)
@@ -94,7 +94,7 @@ class Span():
         return frame.start >= self.start and frame.stop <= self.stop
 
 
-class Frames():
+class Frames:
     def __init__(self, frames=None):
         if not frames:
             frames = []
@@ -146,9 +146,7 @@ class Frames():
 
     def _get_index_by_id(self, id):
         try:
-            return next(
-                i for i, v in enumerate(self['id']) if v.startswith(id)
-            )
+            return next(i for i, v in enumerate(self["id"]) if v.startswith(id))
         except StopIteration:
             raise KeyError("Frame with id {} not found.".format(id))
 
@@ -164,12 +162,10 @@ class Frames():
         self._update_span(frame.start, frame.stop)
         return frame
 
-    def new_frame(self, project, start, stop, tags=None, id=None,
-                  updated_at=None):
+    def new_frame(self, project, start, stop, tags=None, id=None, updated_at=None):
         if not id:
             id = uuid.uuid4().hex
-        return Frame(start, stop, project, id, tags=tags,
-                     updated_at=updated_at)
+        return Frame(start, stop, project, id, tags=tags, updated_at=updated_at)
 
     def dump(self):
         return tuple(frame.dump() for frame in self._rows)

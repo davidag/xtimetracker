@@ -44,9 +44,7 @@ ClickContext = Namespace
         (get_tags, []),
     ],
 )
-def test_if_returned_values_are_distinct(
-    timetracker_df, func_to_test, args
-):
+def test_if_returned_values_are_distinct(timetracker_df, func_to_test, args):
     ctx = ClickContext(obj=timetracker_df)
     prefix = ""
     ret_list = list(func_to_test(ctx, args, prefix))
@@ -85,9 +83,7 @@ def test_if_empty_prefix_returns_everything(
         (get_tags, []),
     ],
 )
-def test_completion_of_nonexisting_prefix(
-    timetracker_df, func_to_test, args
-):
+def test_completion_of_nonexisting_prefix(timetracker_df, func_to_test, args):
     ctx = ClickContext(obj=timetracker_df)
     prefix = "NOT-EXISTING-PREFIX"
     ret_list = list(func_to_test(ctx, args, prefix))
@@ -125,16 +121,18 @@ def test_completion_of_existing_prefix(
     assert all(cur_elem.startswith(prefix) for cur_elem in ret_set)
 
 
-@pytest.mark.parametrize("func", [
-    get_projects, get_tags, get_frames, get_project_or_tag_completion])
+@pytest.mark.parametrize(
+    "func", [get_projects, get_tags, get_frames, get_project_or_tag_completion]
+)
 def test_timetracker_object_gets_created_if_empty_with_positional_args(func):
     ctx = ClickContext(obj=None)
     func(ctx, [], "")
     assert isinstance(ctx.obj, TimeTracker)
 
 
-@pytest.mark.parametrize("func", [
-    get_projects, get_tags, get_frames, get_project_or_tag_completion])
+@pytest.mark.parametrize(
+    "func", [get_projects, get_tags, get_frames, get_project_or_tag_completion]
+)
 def test_timetracker_object_gets_created_if_empty_with_keyword_args(func):
     ctx = ClickContext(obj=None)
     func(ctx=ctx, args=[], incomplete="")

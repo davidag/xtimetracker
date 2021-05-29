@@ -17,18 +17,15 @@ def get_options():
         "-f",
         "--format",
         default="csv",
-        help="The format to print the frames (default: csv)"
+        help="The format to print the frames (default: csv)",
     )
     parser.add_argument(
         "-p",
         "--processing",
         default="raw",
-        help="The level of data processing before printing (default: raw)"
+        help="The level of data processing before printing (default: raw)",
     )
-    parser.add_argument(
-        "file",
-        action="store",
-        help="The frames file to parse")
+    parser.add_argument("file", action="store", help="The frames file to parse")
     options = parser.parse_args()
     return options
 
@@ -38,7 +35,7 @@ def load_json(filepath):
     if not f.is_file():
         sys.exit(f"Invalid file: {f}")
 
-    with f.open('r') as handle:
+    with f.open("r") as handle:
         return json.load(handle)
 
 
@@ -53,7 +50,7 @@ def print_data(data, fmt, proc):
         print(f"{start} {stop} {project} {id} {tags} {updated_at}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     options = get_options()
 
     data = load_json(options.file)

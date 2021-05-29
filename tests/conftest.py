@@ -15,7 +15,7 @@ from xtimetracker.cli.utils import create_configuration
 
 @pytest.fixture
 def config(tmpdir):
-    config_dir = tmpdir.mkdir('config')
+    config_dir = tmpdir.mkdir("config")
     return create_configuration(config_dir=str(config_dir))
 
 

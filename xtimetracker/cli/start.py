@@ -25,13 +25,21 @@ if TYPE_CHECKING:
 
 
 @cli.command()
-@click.option('-s', '--stretch', is_flag=True, default=False,
-              help=("Stretch start time to continue after last tracked activity."))
-@click.option('-r', '--restart', is_flag=True, default=False,
-              help="Restart last frame or last project frame if a project "
-                   "is provided.")
-@click.argument('args', nargs=-1,
-                autocompletion=get_project_or_tag_completion)
+@click.option(
+    "-s",
+    "--stretch",
+    is_flag=True,
+    default=False,
+    help=("Stretch start time to continue after last tracked activity."),
+)
+@click.option(
+    "-r",
+    "--restart",
+    is_flag=True,
+    default=False,
+    help="Restart last frame or last project frame if a project " "is provided.",
+)
+@click.argument("args", nargs=-1, autocompletion=get_project_or_tag_completion)
 @click.pass_obj
 @click.pass_context
 @catch_timetracker_error
@@ -46,9 +54,9 @@ def start(ctx, tt: TimeTracker, stretch, restart, args):
     `options.stop_on_start` is true, it will be stopped before the new
     activity is started.
     """
-    stop_flag = tt.config.getboolean('options', 'stop_on_start')
-    restart_flag = restart or tt.config.getboolean('options', 'restart_on_start')
-    stretch_flag = stretch or tt.config.getboolean('options', 'autostretch_on_start')
+    stop_flag = tt.config.getboolean("options", "stop_on_start")
+    restart_flag = restart or tt.config.getboolean("options", "restart_on_start")
+    stretch_flag = stretch or tt.config.getboolean("options", "autostretch_on_start")
 
     project = parse_project(args)
     tags = parse_tags(args)
@@ -60,8 +68,11 @@ def start(ctx, tt: TimeTracker, stretch, restart, args):
     # check that we can stop the activity in progress (if any)
     if tt.is_started and not stop_flag:
         raise click.ClickException(
-            style('error', "Project {} is already started with tags '{}'".format(
-                tt.current["project"], ", ".join(tt.current["tags"]))
+            style(
+                "error",
+                "Project {} is already started with tags '{}'".format(
+                    tt.current["project"], ", ".join(tt.current["tags"])
+                ),
             )
         )
 
@@ -92,10 +103,12 @@ def start(ctx, tt: TimeTracker, stretch, restart, args):
 
     current = tt.start(project, tags, stretch_flag)
 
-    click.echo("Starting project {}{} at {}".format(
-        style('project', project),
-        (" " if current['tags'] else "") + style('tags', current['tags']),
-        style('time', "{:HH:mm}".format(current['start']))
-    ))
+    click.echo(
+        "Starting project {}{} at {}".format(
+            style("project", project),
+            (" " if current["tags"] else "") + style("tags", current["tags"]),
+            style("time", "{:HH:mm}".format(current["start"])),
+        )
+    )
 
     tt.save()

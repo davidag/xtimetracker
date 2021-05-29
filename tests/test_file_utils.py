@@ -15,8 +15,8 @@ from xtimetracker.file_utils import safe_save, json_writer
 
 
 def test_safe_save(config):
-    save_file = os.path.join(config.config_dir, 'test')
-    backup_file = os.path.join(config.config_dir, 'test' + '.bak')
+    save_file = os.path.join(config.config_dir, "test")
+    backup_file = os.path.join(config.config_dir, "test" + ".bak")
 
     assert not os.path.exists(save_file)
     safe_save(save_file, lambda f: f.write("Success"))
@@ -39,8 +39,8 @@ def test_safe_save(config):
 
 
 def test_safe_save_tmpfile_on_other_filesystem(config, mocker):
-    save_file = os.path.join(config.config_dir, 'test')
-    backup_file = os.path.join(config.config_dir, 'test' + '.bak')
+    save_file = os.path.join(config.config_dir, "test")
+    backup_file = os.path.join(config.config_dir, "test" + ".bak")
 
     assert not os.path.exists(save_file)
     safe_save(save_file, lambda f: f.write("Success"))
@@ -52,7 +52,7 @@ def test_safe_save_tmpfile_on_other_filesystem(config, mocker):
 
     # simulate tmpfile being on another file-system
     # OSError is caught and handled by shutil.move() used by save_safe()
-    mocker.patch('os.rename', side_effect=OSError)
+    mocker.patch("os.rename", side_effect=OSError)
     safe_save(save_file, "Again")
     assert os.path.exists(backup_file)
 
@@ -61,8 +61,8 @@ def test_safe_save_tmpfile_on_other_filesystem(config, mocker):
 
 
 def test_safe_save_with_exception(config):
-    save_file = os.path.join(config.config_dir, 'test')
-    backup_file = os.path.join(config.config_dir, 'test' + '.bak')
+    save_file = os.path.join(config.config_dir, "test")
+    backup_file = os.path.join(config.config_dir, "test" + ".bak")
 
     def failing_writer(f):
         raise RuntimeError("Save failed.")
@@ -90,29 +90,28 @@ def test_safe_save_with_exception(config):
 
 def test_make_json_writer():
     fp = StringIO()
-    writer = json_writer(lambda: {'foo': 42})
+    writer = json_writer(lambda: {"foo": 42})
     writer(fp)
     assert fp.getvalue() == '{\n "foo": 42\n}'
 
 
 def test_make_json_writer_with_args():
     fp = StringIO()
-    writer = json_writer(lambda x: {'foo': x}, 23)
+    writer = json_writer(lambda x: {"foo": x}, 23)
     writer(fp)
     assert fp.getvalue() == '{\n "foo": 23\n}'
 
 
 def test_make_json_writer_with_kwargs():
     fp = StringIO()
-    writer = json_writer(
-        lambda foo=None: {'foo': foo}, foo='bar')
+    writer = json_writer(lambda foo=None: {"foo": foo}, foo="bar")
     writer(fp)
     assert fp.getvalue() == '{\n "foo": "bar"\n}'
 
 
 def test_make_json_writer_with_unicode():
     fp = StringIO()
-    writer = json_writer(lambda: {'ùñï©ôð€': 'εvεrywhεrε'})
+    writer = json_writer(lambda: {"ùñï©ôð€": "εvεrywhεrε"})
     writer(fp)
     expected = '{\n "ùñï©ôð€": "εvεrywhεrε"\n}'
     assert fp.getvalue() == expected

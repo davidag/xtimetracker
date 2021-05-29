@@ -21,7 +21,7 @@ class Config(configparser.ConfigParser):
 
     def __init__(self, config_dir=None, **kwargs):
         self.config_dir = config_dir
-        self.config_file = os.path.join(self.config_dir, 'config')
+        self.config_file = os.path.join(self.config_dir, "config")
         super().__init__(**kwargs)
 
     def reload(self, contents=None):
@@ -81,7 +81,7 @@ class Config(configparser.ConfigParser):
         If option is not set or empty, return default (defaults to False).
         """
         val = self.get(section, option)
-        return val.lower() in ('1', 'on', 'true', 'yes') if val else default
+        return val.lower() in ("1", "on", "true", "yes") if val else default
 
     def getlist(self, section, option, default=None):
         """
@@ -113,9 +113,8 @@ class Config(configparser.ConfigParser):
 
         value = self.get(section, option)
 
-        if '\n' in value:
-            return [item.strip()
-                    for item in value.splitlines() if item.strip()]
+        if "\n" in value:
+            return [item.strip() for item in value.splitlines() if item.strip()]
         else:
             return shlex.split(value)
 
@@ -129,4 +128,3 @@ class Config(configparser.ConfigParser):
             self.add_section(section)
 
         super().set(section, option, value)
-

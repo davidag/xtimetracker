@@ -16,7 +16,7 @@ class FileIOError(TimeTrackerError):
     pass
 
 
-def safe_save(path, content, ext='.bak'):
+def safe_save(path, content, ext=".bak"):
     """
     Save given content to file at given path safely.
 
@@ -32,7 +32,7 @@ def safe_save(path, content, ext='.bak'):
     the temporary file moved into its place.
 
     """
-    tmpfp = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+    tmpfp = tempfile.NamedTemporaryFile(mode="w+", delete=False)
     try:
         with tmpfp as fp:
             if isinstance(content, str):
@@ -81,14 +81,10 @@ def load_json(filename, type=dict):
         if os.path.getsize(filename) == 0:
             return type()
         else:
-            raise TimeTrackerError(
-                "Invalid JSON file {}: {}".format(filename, e)
-            )
+            raise TimeTrackerError("Invalid JSON file {}: {}".format(filename, e))
     except Exception as e:
         raise TimeTrackerError(
-            "Unexpected error while loading JSON file {}: {}".format(
-                filename, e
-            )
+            "Unexpected error while loading JSON file {}: {}".format(filename, e)
         )
 
 
@@ -97,8 +93,9 @@ def json_writer(func, *args, **kwargs):
     Return a function that receives a file-like object and writes the
     return value of func(*args, **kwargs) as JSON to it.
     """
+
     def writer(f):
-        dump = json.dumps(
-            func(*args, **kwargs), indent=1, ensure_ascii=False)
+        dump = json.dumps(func(*args, **kwargs), indent=1, ensure_ascii=False)
         f.write(dump)
+
     return writer

@@ -15,9 +15,10 @@ class Backend:
     """
     Handles file I/O to save/load data from a backend (currently filesystem regular files).
     """
+
     def __init__(self, data_dir: str):
-        self._frames_file = os.path.join(data_dir, 'frames')
-        self._state_file = os.path.join(data_dir, 'state')
+        self._frames_file = os.path.join(data_dir, "frames")
+        self._state_file = os.path.join(data_dir, "state")
         self._last_state = None
 
     def save(self, state: dict, frames: Frames):
@@ -28,9 +29,9 @@ class Backend:
             if self._last_state is None or state != self._last_state:
                 if state is not None:
                     raw_state = {
-                        'project': state['project'],
-                        'start': state['start'].timestamp,
-                        'tags': state.get('tags', []),
+                        "project": state["project"],
+                        "start": state["start"].timestamp,
+                        "tags": state.get("tags", []),
                     }
                 else:
                     raw_state = {}
@@ -41,21 +42,19 @@ class Backend:
                 safe_save(self._frames_file, json_writer(frames.dump))
 
         except OSError as e:
-            raise TimeTrackerError(
-                "Error writing file '{}': {}".format(e.filename, e)
-            )
+            raise TimeTrackerError("Error writing file '{}': {}".format(e.filename, e))
 
     def load_state(self) -> dict:
         raw_state = load_json(self._state_file)
 
-        if not raw_state or 'project' not in raw_state:
+        if not raw_state or "project" not in raw_state:
             self._last_state = {}
             return self._last_state
 
         self._last_state = {
-            'project': raw_state['project'],
-            'start': arrow.get(raw_state['start'], tzinfo=tz.tzlocal()),
-            'tags': raw_state.get('tags') or []
+            "project": raw_state["project"],
+            "start": arrow.get(raw_state["start"], tzinfo=tz.tzlocal()),
+            "tags": raw_state.get("tags") or [],
         }
         return self._last_state
 

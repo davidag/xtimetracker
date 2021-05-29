@@ -14,18 +14,19 @@ def patch_click_ctx_object(func):
     def wrapper(*args, **kwargs):
         if len(args) > 0:
             ctx = args[0]
-        elif 'ctx' in kwargs:
-            ctx = kwargs['ctx']
+        elif "ctx" in kwargs:
+            ctx = kwargs["ctx"]
         if ctx.obj is None:
             ctx.obj = create_timetracker(create_configuration())
         return func(*args, **kwargs)
+
     return wrapper
 
 
 @patch_click_ctx_object
 def get_project_or_tag_completion(ctx, args, incomplete):
     """Function to autocomplete either organisations or tasks, depending on the
-       shape of the current argument."""
+    shape of the current argument."""
 
     assert isinstance(incomplete, str)
 
@@ -60,9 +61,7 @@ def get_project_or_tag_completion(ctx, args, incomplete):
         for cur_suggestion in tag_suggestions:
             yield "+{cur_suggestion}".format(cur_suggestion=cur_suggestion)
 
-    project_is_completed = any(
-        tok.startswith("+") for tok in args + [incomplete]
-    )
+    project_is_completed = any(tok.startswith("+") for tok in args + [incomplete])
     if project_is_completed:
         incomplete_tag = get_incomplete_tag(args, incomplete)
         fixed_incomplete_tag = fix_broken_tag_parsing(incomplete_tag)
