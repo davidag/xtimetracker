@@ -840,8 +840,8 @@ def edit(timetracker, frame_id):
             None,
             timetracker.current["tags"],
         )
-    elif timetracker.frames:
-        frame = timetracker.frames[-1]
+    elif timetracker.count():
+        frame = timetracker.frames(-1)
         frame_id = frame.id
     else:
         raise click.ClickException(

@@ -58,68 +58,72 @@ def test_current_timetracker_non_valid_json(mocker, timetracker):
         timetracker.current
 
 
-def test_current_with_given_state(config, mocker):
+def test_current_with_given_state(mocker, timetracker):
     content = json.dumps({"project": "foo", "start": 4000})
     mocker.patch("builtins.open", mocker.mock_open(read_data=content))
-
-    timetracker = TimeTracker(config)
-
     assert timetracker.current["project"] == "foo"
 
 
 # frames
 
 
-def test_frames(mocker, timetracker):
+def test_frames(mocker, config):
     content = json.dumps([[4000, 4010, "foo", None, ["A", "B", "C"]]])
-
     mocker.patch("builtins.open", mocker.mock_open(read_data=content))
-    assert len(timetracker.frames) == 1
-    assert timetracker.frames[0].project == "foo"
-    assert timetracker.frames[0].start == arrow.get(4000)
-    assert timetracker.frames[0].stop == arrow.get(4010)
-    assert timetracker.frames[0].tags == ["A", "B", "C"]
+
+    timetracker = TimeTracker(config)
+    assert timetracker.count() == 1
+
+    frame = timetracker.frames(0)
+    assert frame.project == "foo"
+    assert frame.start == arrow.get(4000)
+    assert frame.stop == arrow.get(4010)
+    assert frame.tags == ["A", "B", "C"]
 
 
-def test_frames_without_tags(mocker, timetracker):
+def test_frames_without_tags(mocker, config):
     content = json.dumps([[4000, 4010, "foo", None]])
-
     mocker.patch("builtins.open", mocker.mock_open(read_data=content))
-    assert len(timetracker.frames) == 1
-    assert timetracker.frames[0].project == "foo"
-    assert timetracker.frames[0].start == arrow.get(4000)
-    assert timetracker.frames[0].stop == arrow.get(4010)
-    assert timetracker.frames[0].tags == []
+
+    timetracker = TimeTracker(config)
+    assert timetracker.count() == 1
+
+    frame = timetracker.frames(0)
+    assert frame.project == "foo"
+    assert frame.start == arrow.get(4000)
+    assert frame.stop == arrow.get(4010)
+    assert frame.tags == []
 
 
 def test_frames_with_empty_file(mocker, timetracker):
     mocker.patch("builtins.open", mocker.mock_open(read_data=""))
     mocker.patch("os.path.getsize", return_value=0)
-    assert len(timetracker.frames) == 0
+    assert timetracker.count() == 0
 
 
 def test_frames_with_nonexistent_file(mocker, timetracker):
     mocker.patch("builtins.open", side_effect=FileNotFoundError)
-    assert len(timetracker.frames) == 0
+    assert timetracker.count() == 0
 
 
-def test_frames_timetracker(mocker, timetracker):
+def test_frames_timetracker(mocker, config):
     content = "{'foo': bar}"
 
     mocker.patch("builtins.open", mocker.mock_open(read_data=content))
     mocker.patch("os.path.getsize", return_value=len(content))
+
     with pytest.raises(TimeTrackerError):
-        timetracker.frames
+        TimeTracker(config)
 
 
 def test_given_frames(config, mocker):
     content = json.dumps([[4000, 4010, "bar", None, ["A", "B"]]])
-    timetracker = TimeTracker(config)
-
     mocker.patch("builtins.open", mocker.mock_open(read_data=content))
-    assert len(timetracker.frames) == 1
-    assert timetracker.frames[0].project == "bar"
-    assert timetracker.frames[0].tags == ["A", "B"]
+
+    timetracker = TimeTracker(config)
+    assert timetracker.count() == 1
+    assert timetracker.frames(0).project == "bar"
+    assert timetracker.frames(0).tags == ["A", "B"]
 
 
 # start
@@ -182,7 +186,7 @@ def test_start_stretch(timetracker):
     timetracker.stop()
     timetracker.start("bar", stretch=True)
 
-    assert timetracker.frames[-1].stop == timetracker.current["start"]
+    assert timetracker.frames(-1).stop == timetracker.current["start"]
 
 
 def test_start_stretch_latest_stop_date(timetracker):
@@ -190,8 +194,8 @@ def test_start_stretch_latest_stop_date(timetracker):
     timetracker.stop()
     timetracker.start("bar")
     timetracker.stop()
-    foo = timetracker.frames[-2]
-    bar = timetracker.frames[-1]
+    foo = timetracker.frames(-2)
+    bar = timetracker.frames(-1)
     bar.start = bar.start.shift(days=-1)
     bar.stop = bar.stop.shift(days=-1)
 
@@ -208,11 +212,13 @@ def test_stop_started_project(timetracker):
 
     assert timetracker.current == {}
     assert not timetracker.is_started
-    assert len(timetracker.frames) == 1
-    assert timetracker.frames[0].project == "foo"
-    assert isinstance(timetracker.frames[0].start, arrow.Arrow)
-    assert isinstance(timetracker.frames[0].stop, arrow.Arrow)
-    assert timetracker.frames[0].tags == ["A", "B"]
+    assert timetracker.count() == 1
+
+    frame = timetracker.frames(0)
+    assert frame.project == "foo"
+    assert isinstance(frame.start, arrow.Arrow)
+    assert isinstance(frame.stop, arrow.Arrow)
+    assert frame.tags == ["A", "B"]
 
 
 def test_stop_started_project_without_tags(timetracker):
@@ -221,11 +227,13 @@ def test_stop_started_project_without_tags(timetracker):
 
     assert timetracker.current == {}
     assert not timetracker.is_started
-    assert len(timetracker.frames) == 1
-    assert timetracker.frames[0].project == "foo"
-    assert isinstance(timetracker.frames[0].start, arrow.Arrow)
-    assert isinstance(timetracker.frames[0].stop, arrow.Arrow)
-    assert timetracker.frames[0].tags == []
+    assert timetracker.count() == 1
+
+    frame = timetracker.frames(0)
+    assert frame.project == "foo"
+    assert isinstance(frame.start, arrow.Arrow)
+    assert isinstance(frame.stop, arrow.Arrow)
+    assert frame.tags == []
 
 
 def test_stop_no_project(timetracker):
@@ -241,7 +249,7 @@ def test_cancel_started_project(timetracker):
     timetracker.cancel()
 
     assert timetracker.current == {}
-    assert len(timetracker.frames) == 0
+    assert timetracker.count() == 0
 
 
 def test_cancel_no_project(timetracker):
@@ -325,7 +333,7 @@ def test_save_added_frame(config, mocker, json_mock):
     mocker.patch("builtins.open", mocker.mock_open(read_data=content))
 
     timetracker = TimeTracker(config)
-    timetracker.frames.add("bar", 4010, 4020, ["A"])
+    timetracker._frames.add("bar", 4010, 4020, ["A"])
     timetracker.save()
 
     # both frames and state written
@@ -343,7 +351,7 @@ def test_save_changed_frame(config, mocker, json_mock):
     mocker.patch("builtins.open", mocker.mock_open(read_data=content))
 
     timetracker = TimeTracker(config)
-    timetracker.frames[0] = ("bar", 4000, 4010, ["A", "B"])
+    timetracker._frames[0] = ("bar", 4000, 4010, ["A", "B"])
     timetracker.save()
 
     # both frames and state written
@@ -438,7 +446,7 @@ def test_report(timetracker):
         (3600 * 48, 3600.0),
     ),
 )
-def test_report_include_partial_frames(mocker, timetracker, date_as_unixtime, sum_):
+def test_report_include_partial_frames(mocker, config, date_as_unixtime, sum_):
     """Test report building with frames that cross report boundaries
 
     1 event is added that has 2 hours in one day and 1 in the next.
@@ -456,6 +464,8 @@ def test_report_include_partial_frames(mocker, timetracker, date_as_unixtime, su
         ]
     )
     mocker.patch("builtins.open", mocker.mock_open(read_data=content))
+
+    timetracker = TimeTracker(config)
     date = arrow.get(date_as_unixtime)
     report = timetracker.report(from_=date, to=date)
     assert report["time"] == pytest.approx(sum_, abs=1e-3)
@@ -472,9 +482,9 @@ def test_add_success(timetracker):
         project="test_project", tags=["fuu", "bar"], from_date=6000, to_date=7000
     )
 
-    assert len(timetracker.frames) == 1
-    assert timetracker.frames[0].project == "test_project"
-    assert "fuu" in timetracker.frames[0].tags
+    assert timetracker.count() == 1
+    assert timetracker.frames(0).project == "test_project"
+    assert "fuu" in timetracker.frames(0).tags
 
 
 def test_add_failure(timetracker):
@@ -515,11 +525,12 @@ def test_edit_frame(timetracker):
 
     timetracker.edit(f.id, "test2", f.start, f.stop, [])
 
-    assert len(timetracker.frames) == 1
-    assert timetracker.frames[0].project == "test2"
-    assert timetracker.frames[0].start == f.start
-    assert timetracker.frames[0].stop == f.stop
-    assert timetracker.frames[0].tags == []
+    assert timetracker.count() == 1
+    frame = timetracker.frames(0)
+    assert frame.project == "test2"
+    assert frame.start == f.start
+    assert frame.stop == f.stop
+    assert frame.tags == []
 
 
 # get_latest_frame

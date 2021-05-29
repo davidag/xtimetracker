@@ -57,11 +57,11 @@ def fill_tt_randomly(timetracker, project_data, allow_all_tags):
             project, tags = random.choice(project_data)
             max_tags = len(tags) if allow_all_tags else len(tags) - 1
             frame_tags = random.sample(tags, random.randint(0, max_tags))
-            frame = timetracker.frames.add(
+            frame = timetracker.add(
                 project,
                 start,
                 start.shift(seconds=random.randint(60, 4 * 60 * 60)),
-                tags=frame_tags,
+                frame_tags,
             )
             start = frame.stop.shift(seconds=random.randint(0, 1 * 60 * 60))
 

@@ -9,12 +9,12 @@ import operator
 import arrow
 from collections import defaultdict
 from functools import reduce
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from .backend import Backend
 from .config import Config
 from .utils import deduplicate, sorted_groupby, TimeTrackerError
-from .frames import Span
+from .frames import Frames, Span
 
 
 class TimeTracker:
@@ -25,17 +25,11 @@ class TimeTracker:
         """
         self.config = config
         self._current: Optional[dict] = None
-        self._frames = None
         self._backend = Backend(config.config_dir)
+        self._frames: Frames = self._backend.load_frames()
 
     def save(self):
         self._backend.save(self._current, self._frames)
-
-    @property
-    def frames(self):
-        if self._frames is None:
-            self._frames = self._backend.load_frames()
-        return self._frames
 
     @property
     def current(self):
@@ -47,11 +41,20 @@ class TimeTracker:
     def is_started(self):
         return self.current
 
+    def frames(self, key: Optional[Union[int, str]] = None, **filters):
+        """Returns the frame or frames given by key or filters."""
+        if key is not None:
+            return self._frames[key]
+        return self._frames.filter(**filters)
+
+    def count(self):
+        return len(self._frames)
+
     def get_latest_frame(self, project: str) -> Optional[dict]:
         last_frame = None
         # frames are returned in the order they were added, not by date, that's why we
         # have to iterate over all of them.
-        for f in self.frames.filter(projects=[project]):
+        for f in self.frames(projects=[project]):
             if not last_frame:
                 last_frame = f
             elif last_frame.start < f.start:
@@ -59,7 +62,7 @@ class TimeTracker:
         return last_frame
 
     def full_span(self, include_current: bool = False) -> Span:
-        s = self.frames.span
+        s = self._frames.span
         if include_current and self.is_started:
             s |= Span(self.current["start"], arrow.now())
         return s
@@ -79,7 +82,7 @@ class TimeTracker:
         default_tags = self.config.getlist("default_tags", project)
         tags = (tags or []) + default_tags
 
-        frame = self.frames.add(project, from_date, to_date, tags=tags)
+        frame = self._frames.add(project, from_date, to_date, tags=tags)
         return frame
 
     def edit(
@@ -91,7 +94,7 @@ class TimeTracker:
         tags: List[str],
     ):
         if frame_id:
-            self.frames[frame_id] = (project, start, stop, tags)
+            self._frames[frame_id] = (project, start, stop, tags)
         else:
             self._current = dict(start=start, project=project, tags=tags)
 
@@ -100,11 +103,11 @@ class TimeTracker:
         default_tags = self.config.getlist("default_tags", project)
         tags = (tags or []) + default_tags
         new_frame = {"project": project, "tags": deduplicate(tags)}
-        if stretch and len(self.frames) > 0:
+        if stretch and len(self._frames) > 0:
             max_elapsed = self.config.getint(
                 "options", "autostretch_max_elapsed_secs", 28800
             )
-            last_frame = max(self.frames, key=lambda f: f.stop.timestamp)
+            last_frame = max(self._frames, key=lambda f: f.stop.timestamp)
             if arrow.now().timestamp - last_frame.stop.timestamp < max_elapsed:
                 new_frame["start"] = last_frame.stop
         if "start" not in new_frame:
@@ -115,7 +118,7 @@ class TimeTracker:
     def stop(self):
         if not self.is_started:
             raise TimeTrackerError("No project started.")
-        frame = self.frames.add(
+        frame = self._frames.add(
             self._current["project"],
             self._current["start"],
             arrow.now(),
@@ -135,7 +138,7 @@ class TimeTracker:
         """
         Return the list of all the existing projects, sorted by name.
         """
-        frames = self.frames.filter(tags=tags)
+        frames = self.frames(tags=tags)
         matched_tags = defaultdict(set)
         projects = set()
         for f in frames:
@@ -150,7 +153,7 @@ class TimeTracker:
         """
         Return the list of the tags, sorted by name.
         """
-        frames = self.frames.filter(projects=projects)
+        frames = self.frames(projects=projects)
         matched_projects = defaultdict(set)
         tags = set()
         for f in frames:
@@ -200,12 +203,12 @@ class TimeTracker:
 
         if self.is_started and current:
             cur = self.current
-            self.frames.add(
+            self._frames.add(
                 cur["project"], cur["start"], arrow.now(), cur["tags"], id="current"
             )
 
         span = Span(from_, to)
-        filtered_frames = self.frames.filter(
+        filtered_frames = self.frames(
             projects=projects,
             tags=tags,
             ignore_projects=ignore_projects,
@@ -254,7 +257,7 @@ class TimeTracker:
         # consumed and this removal does not affect frames_by_project.
         # That's why we don't delete the current frame inside log().
         if self.is_started and current:
-            del self.frames["current"]
+            del self._frames["current"]
 
         total = datetime.timedelta()
         span = Span(from_, to)

@@ -152,14 +152,14 @@ def test_build_csv_multiple_cols():
 
 
 def test_frames_to_csv_empty_data(timetracker):
-    assert frames_to_csv(timetracker.frames) == ""
+    assert frames_to_csv(timetracker._frames) == ""
 
 
 def test_frames_to_csv(timetracker):
     timetracker.start("foo", tags=["A", "B"])
     timetracker.stop()
 
-    result = frames_to_csv(timetracker.frames)
+    result = frames_to_csv(timetracker._frames)
 
     read_csv = list(csv.reader(StringIO(result)))
     header = ["id", "start", "stop", "project", "tags"]
@@ -173,14 +173,14 @@ def test_frames_to_csv(timetracker):
 
 
 def test_frames_to_json_empty_data(timetracker):
-    assert frames_to_json(timetracker.frames) == "[]"
+    assert frames_to_json(timetracker._frames) == "[]"
 
 
 def test_frames_to_json(timetracker):
     timetracker.start("foo", tags=["A", "B"])
     timetracker.stop()
 
-    result = json.loads(frames_to_json(timetracker.frames))
+    result = json.loads(frames_to_json(timetracker._frames))
 
     keys = {"id", "start", "stop", "project", "tags"}
     assert len(result) == 1

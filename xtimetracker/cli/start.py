@@ -13,6 +13,7 @@ from .autocompletion import get_project_or_tag_completion
 from .cli import cli
 from .stop import stop
 from .utils import (
+    DateTime,
     catch_timetracker_error,
     get_frame_from_argument,
     style,
@@ -33,6 +34,13 @@ if TYPE_CHECKING:
     help=("Stretch start time to continue after last tracked activity."),
 )
 @click.option(
+    "-f",
+    "--from",
+    "from_",
+    type=DateTime,
+    help="Use a start time different from now, updating the previous tracking if required.",
+)
+@click.option(
     "-r",
     "--restart",
     is_flag=True,
@@ -43,7 +51,7 @@ if TYPE_CHECKING:
 @click.pass_obj
 @click.pass_context
 @catch_timetracker_error
-def start(ctx, tt: TimeTracker, stretch, restart, args):
+def start(ctx, tt: TimeTracker, stretch, from_, restart, args):
     """
     Start tracking an activity associated to a project.
 

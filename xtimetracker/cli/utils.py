@@ -188,7 +188,7 @@ def get_frame_from_argument(timetracker: TimeTracker, arg):
     try:
         index = int(arg)
         if index < 0:
-            return timetracker.frames[index]
+            return timetracker.frames(index)
     except IndexError:
         raise click.ClickException(
             style("error", "No frame found for index {}.".format(arg))
@@ -198,7 +198,7 @@ def get_frame_from_argument(timetracker: TimeTracker, arg):
 
     # if we didn't find a frame by position, we try by id
     try:
-        return timetracker.frames[arg]
+        return timetracker.frames(arg)
     except KeyError:
         raise click.ClickException(
             "{} {}.".format(

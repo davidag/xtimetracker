@@ -78,7 +78,7 @@ def get_frames(ctx, param, incomplete):
     generator. If no ID matches the prefix, it returns the empty generator.
     """
     timetracker = ctx.obj
-    for cur_frame in timetracker.frames:
+    for cur_frame in timetracker.frames():
         yield_candidate = cur_frame.id
         if yield_candidate.startswith(incomplete):
             yield yield_candidate

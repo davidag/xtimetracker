@@ -92,7 +92,7 @@ class OutputParser:
     @staticmethod
     def get_start_date(timetracker, output):
         frame_id = OutputParser.get_frame_id(output)
-        return timetracker.frames[frame_id].start.format("YYYY-MM-DD HH:mm:ss")
+        return timetracker.frames(frame_id).start.format("YYYY-MM-DD HH:mm:ss")
 
 
 # start
@@ -102,7 +102,7 @@ class OutputParser:
 def test_start_doesnt_support_frame_references(runner, timetracker_df):
     result = runner.invoke(cli.start, ["-1"], obj=timetracker_df)
     assert result.exit_code == 2  # -1 option not allowed
-    frame = timetracker_df.frames["e935a543"]
+    frame = timetracker_df.frames("e935a543")
     result = runner.invoke(cli.start, [str(frame.id)], obj=timetracker_df)
     assert result.exit_code == 0
     assert frame.project not in result.output
@@ -217,10 +217,10 @@ def test_start_restart_running_frame(runner, timetracker):
     timetracker.config.set("options", "stop_on_start", "true")
     result = runner.invoke(cli.start, ["project-1", "+mytag"], obj=timetracker)
     assert result.exit_code == 0
-    assert len(timetracker.frames) == 0
+    assert timetracker.count() == 0
     result = runner.invoke(cli.start, ["-r"], obj=timetracker)
     assert result.exit_code == 0
-    assert len(timetracker.frames) == 1
+    assert timetracker.count() == 1
     assert timetracker.current["project"] == "project-1"
     assert {"mytag"} == set(timetracker.current["tags"])
 
@@ -229,11 +229,11 @@ def test_start_restart_running_frame_plus_tags(runner, timetracker):
     timetracker.config.set("options", "stop_on_start", "true")
     result = runner.invoke(cli.start, ["project-1", "+tag1"], obj=timetracker)
     assert result.exit_code == 0
-    assert len(timetracker.frames) == 0
+    assert timetracker.count() == 0
     result = runner.invoke(cli.start, ["-r", "+tag2", "+a tag"], obj=timetracker)
     assert result.exit_code == 0
     assert timetracker.current["project"] == "project-1"
-    assert len(timetracker.frames) == 1
+    assert timetracker.count() == 1
     assert set(["tag1", "tag2", "a tag"]) == set(timetracker.current["tags"])
 
 
@@ -246,7 +246,7 @@ def test_start_restart_latest_frame(runner, timetracker):
     result = runner.invoke(cli.start, ["-r"], obj=timetracker)
     assert result.exit_code == 0
     assert timetracker.current["project"] == "project-1"
-    assert len(timetracker.frames) == 1
+    assert timetracker.count() == 1
 
 
 def test_start_restart_last_frame_plus_tags(runner, timetracker):
@@ -257,7 +257,7 @@ def test_start_restart_last_frame_plus_tags(runner, timetracker):
     assert result.exit_code == 0
     result = runner.invoke(cli.start, ["-r", "+tag3"], obj=timetracker)
     assert result.exit_code == 0
-    assert len(timetracker.frames) == 1
+    assert timetracker.count() == 1
     assert timetracker.current["project"] == "project-2"
     assert set(["tag2", "tag3"]) == set(timetracker.current["tags"])
 
@@ -369,13 +369,13 @@ def test_start_restart_latest_frame_from_non_running_project(runner, timetracker
 # cancel
 
 
-@freeze_time("12:00:00", auto_tick_seconds=60)
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
 def test_cancel(runner, timetracker_df):
-    runner.invoke(cli.start, ["hubble"], obj=timetracker_df)
-    runner.invoke(cli.status, obj=timetracker_df)
-    result = runner.invoke(cli.cancel, obj=timetracker_df)
-    assert result.output == "Canceled tracking: hubble, started 2 minutes ago"
+    with freeze_time("12:00:00"):
+        runner.invoke(cli.start, ["hubble"], obj=timetracker_df)
+    with freeze_time("12:15:00"):
+        result = runner.invoke(cli.cancel, obj=timetracker_df)
+        assert result.output == "Canceled tracking: hubble, started 15 minutes ago\n"
 
 
 # add
