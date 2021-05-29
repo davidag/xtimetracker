@@ -5,6 +5,7 @@
 import os
 import arrow
 from dateutil import tz
+from typing import Optional
 
 from .frames import Frames
 from .file_utils import safe_save, json_writer, load_json
@@ -19,7 +20,7 @@ class Backend:
     def __init__(self, data_dir: str):
         self._frames_file = os.path.join(data_dir, "frames")
         self._state_file = os.path.join(data_dir, "state")
-        self._last_state = None
+        self._last_state: Optional[dict] = None
 
     def save(self, state: dict, frames: Frames):
         """

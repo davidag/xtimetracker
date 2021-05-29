@@ -29,7 +29,7 @@ from xtimetracker.cli.utils import (
     json_encoder,
 )
 
-from . import mock_datetime, TEST_FIXTURE_DIR
+from . import mock_datetime
 
 
 _dt = functools.partial(datetime.datetime, tzinfo=tzutc())

@@ -21,7 +21,6 @@ import click
 from click.exceptions import UsageError
 
 from ..timetracker import TimeTrackerError, TimeTracker
-from ..frames import Frame
 from ..config import Config
 
 

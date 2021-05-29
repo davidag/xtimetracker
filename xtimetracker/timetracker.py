@@ -9,7 +9,7 @@ import operator
 import arrow
 from collections import defaultdict
 from functools import reduce
-from typing import List
+from typing import List, Optional
 
 from .backend import Backend
 from .config import Config
@@ -24,7 +24,7 @@ class TimeTracker:
         :type config: _ConfigParser
         """
         self.config = config
-        self._current = None
+        self._current: Optional[dict] = None
         self._frames = None
         self._backend = Backend(config.config_dir)
 
@@ -47,7 +47,7 @@ class TimeTracker:
     def is_started(self):
         return self.current
 
-    def get_latest_frame(self, project: str) -> dict:
+    def get_latest_frame(self, project: str) -> Optional[dict]:
         last_frame = None
         # frames are returned in the order they were added, not by date, that's why we
         # have to iterate over all of them.

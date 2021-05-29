@@ -342,7 +342,7 @@ def test_start_restart_config_current_project_implicit_same_tags(runner, timetra
 
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
-def test_start_restart_latest_frame(runner, timetracker_df):
+def test_start_restart_latest_frame_with_stop_on_start(runner, timetracker_df):
     timetracker_df.config.set("options", "stop_on_start", "true")
     result = runner.invoke(start, ["hubble", "-r"], obj=timetracker_df)
     assert result.exit_code == 0
