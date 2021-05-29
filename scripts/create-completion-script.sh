@@ -40,11 +40,11 @@ case $1 in
     exit 0
     ;;
   bash)
-    src_command="source"
+    src_command="bash_source"
     dst_script="x.completion"
     ;;
   zsh)
-    src_command="source_zsh"
+    src_command="zsh_source"
     dst_script="x.zsh-completion"
     ;;
   *)

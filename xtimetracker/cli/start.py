@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     default=False,
     help="Restart last frame or last project frame if a project " "is provided.",
 )
-@click.argument("args", nargs=-1, autocompletion=get_project_or_tag_completion)
+@click.argument("args", nargs=-1, shell_complete=get_project_or_tag_completion)
 @click.pass_obj
 @click.pass_context
 @catch_timetracker_error

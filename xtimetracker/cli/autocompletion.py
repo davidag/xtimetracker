@@ -4,27 +4,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
 
-from functools import wraps
-from .utils import create_configuration, create_timetracker, parse_tags
+from .utils import parse_tags
 
 
-def patch_click_ctx_object(func):
-    # When pallets/click#942 is fixed, this won't be needed...
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        if len(args) > 0:
-            ctx = args[0]
-        elif "ctx" in kwargs:
-            ctx = kwargs["ctx"]
-        if ctx.obj is None:
-            ctx.obj = create_timetracker(create_configuration())
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-@patch_click_ctx_object
-def get_project_or_tag_completion(ctx, args, incomplete):
+def get_project_or_tag_completion(ctx, param, incomplete):
     """Function to autocomplete either organisations or tasks, depending on the
     shape of the current argument."""
 
@@ -61,18 +44,17 @@ def get_project_or_tag_completion(ctx, args, incomplete):
         for cur_suggestion in tag_suggestions:
             yield "+{cur_suggestion}".format(cur_suggestion=cur_suggestion)
 
-    project_is_completed = any(tok.startswith("+") for tok in args + [incomplete])
+    project_is_completed = any(tok.startswith("+") for tok in param + [incomplete])
     if project_is_completed:
-        incomplete_tag = get_incomplete_tag(args, incomplete)
+        incomplete_tag = get_incomplete_tag(param, incomplete)
         fixed_incomplete_tag = fix_broken_tag_parsing(incomplete_tag)
-        tag_suggestions = get_tags(ctx, args, fixed_incomplete_tag)
+        tag_suggestions = get_tags(ctx, param, fixed_incomplete_tag)
         return prepend_plus(tag_suggestions)
     else:
-        return get_projects(ctx, args, incomplete)
+        return get_projects(ctx, param, incomplete)
 
 
-@patch_click_ctx_object
-def get_projects(ctx, args, incomplete):
+def get_projects(ctx, param, incomplete):
     """Function to return all projects matching the prefix."""
     timetracker = ctx.obj
     for cur_project in timetracker.projects():
@@ -80,8 +62,7 @@ def get_projects(ctx, args, incomplete):
             yield cur_project
 
 
-@patch_click_ctx_object
-def get_tags(ctx, args, incomplete):
+def get_tags(ctx, param, incomplete):
     """Function to return all tags matching the prefix."""
     timetracker = ctx.obj
     for cur_tag in timetracker.tags():
@@ -89,8 +70,7 @@ def get_tags(ctx, args, incomplete):
             yield cur_tag
 
 
-@patch_click_ctx_object
-def get_frames(ctx, args, incomplete):
+def get_frames(ctx, param, incomplete):
     """
     Return all matching frame IDs
 

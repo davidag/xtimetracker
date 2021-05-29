@@ -46,7 +46,7 @@ from ..utils import sorted_groupby
 class MutuallyExclusiveOption(click.Option):
     def __init__(self, *args, **kwargs):
         self.mutually_exclusive = set(kwargs.pop("mutually_exclusive", []))
-        super(MutuallyExclusiveOption, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def handle_parse_result(self, ctx, opts, args):
         if self.name in opts:
@@ -173,7 +173,8 @@ _SHORTCUT_OPTIONS_VALUES = {k: get_start_time_for_period(k) for k in SHORTCUT_OP
     "-p",
     "--project",
     "projects",
-    autocompletion=get_projects,
+    shell_complete=get_projects,
+    default=(),
     multiple=True,
     help="Include project in the report and exclude all others. "
     "It can be used multiple times.",
@@ -182,6 +183,7 @@ _SHORTCUT_OPTIONS_VALUES = {k: get_start_time_for_period(k) for k in SHORTCUT_OP
     "-P",
     "--exclude-project",
     "exclude_projects",
+    default=(),
     multiple=True,
     help="Exclude project from the report. " "It can be used multiple times.",
 )
@@ -189,7 +191,8 @@ _SHORTCUT_OPTIONS_VALUES = {k: get_start_time_for_period(k) for k in SHORTCUT_OP
     "-a",
     "--tag",
     "tags",
-    autocompletion=get_tags,
+    shell_complete=get_tags,
+    default=(),
     multiple=True,
     help="Include only frames with the given tag. " "It can be used multiple times.",
 )
@@ -207,7 +210,6 @@ _SHORTCUT_OPTIONS_VALUES = {k: get_start_time_for_period(k) for k in SHORTCUT_OP
     cls=MutuallyExclusiveOption,
     flag_value="json",
     mutually_exclusive=["csv"],
-    multiple=True,
     help="Output JSON format.",
 )
 @click.option(
@@ -217,7 +219,6 @@ _SHORTCUT_OPTIONS_VALUES = {k: get_start_time_for_period(k) for k in SHORTCUT_OP
     cls=MutuallyExclusiveOption,
     flag_value="csv",
     mutually_exclusive=["json"],
-    multiple=True,
     help="Output CSV format.",
 )
 @click.option(
@@ -226,7 +227,6 @@ _SHORTCUT_OPTIONS_VALUES = {k: get_start_time_for_period(k) for k in SHORTCUT_OP
     cls=MutuallyExclusiveOption,
     flag_value="plain",
     mutually_exclusive=["json", "csv"],
-    multiple=True,
     default=True,
     hidden=True,
     help="Format output in plain text (default)",
@@ -431,7 +431,8 @@ def report(
     "-p",
     "--project",
     "projects",
-    autocompletion=get_projects,
+    shell_complete=get_projects,
+    default=(),
     multiple=True,
     help="Include project in the report and exclude all others."
     "It can be used multiple times.",
@@ -440,6 +441,7 @@ def report(
     "-P",
     "--exclude-project",
     "exclude_projects",
+    default=(),
     multiple=True,
     help="Exclude project from the report. " "It can be used multiple times.",
 )
@@ -447,7 +449,8 @@ def report(
     "-a",
     "--tag",
     "tags",
-    autocompletion=get_tags,
+    shell_complete=get_tags,
+    default=(),
     multiple=True,
     help="Reports activity only for frames containing the given "
     "tag. It can be used multiple times.",
@@ -467,7 +470,6 @@ def report(
     cls=MutuallyExclusiveOption,
     flag_value="json",
     mutually_exclusive=["csv"],
-    multiple=True,
     help="Format output in JSON instead of plain text",
 )
 @click.option(
@@ -477,7 +479,6 @@ def report(
     cls=MutuallyExclusiveOption,
     flag_value="csv",
     mutually_exclusive=["json"],
-    multiple=True,
     help="Format output in CSV instead of plain text",
 )
 @click.option(
@@ -486,7 +487,6 @@ def report(
     cls=MutuallyExclusiveOption,
     flag_value="plain",
     mutually_exclusive=["json", "csv"],
-    multiple=True,
     default=True,
     hidden=True,
     help="Format output in plain text (default)",
@@ -636,7 +636,8 @@ def aggregate(
     "-p",
     "--project",
     "projects",
-    autocompletion=get_projects,
+    shell_complete=get_projects,
+    default=(),
     multiple=True,
     help="Include project in the report and exclude all others. "
     "It can be used multiple times.",
@@ -645,6 +646,7 @@ def aggregate(
     "-P",
     "--exclude-project",
     "exclude_projects",
+    default=(),
     multiple=True,
     help="Exclude project from the report. " "It can be used multiple times.",
 )
@@ -652,6 +654,7 @@ def aggregate(
     "-A",
     "--exclude-tag",
     "exclude_tags",
+    default=(),
     multiple=True,
     help="Include only frames with the given tag. " "It can be used multiple times.",
 )
@@ -659,7 +662,8 @@ def aggregate(
     "-a",
     "--tag",
     "tags",
-    autocompletion=get_tags,
+    shell_complete=get_tags,
+    default=(),
     multiple=True,
     help="Exclude tag from the report. " "It can be used multiple times.",
 )
@@ -670,7 +674,6 @@ def aggregate(
     cls=MutuallyExclusiveOption,
     flag_value="json",
     mutually_exclusive=["csv"],
-    multiple=True,
     help="Format output in JSON instead of plain text",
 )
 @click.option(
@@ -680,7 +683,6 @@ def aggregate(
     cls=MutuallyExclusiveOption,
     flag_value="csv",
     mutually_exclusive=["json"],
-    multiple=True,
     help="Format output in CSV instead of plain text",
 )
 @click.option(
@@ -689,7 +691,6 @@ def aggregate(
     cls=MutuallyExclusiveOption,
     flag_value="plain",
     mutually_exclusive=["json", "csv"],
-    multiple=True,
     default=True,
     hidden=True,
     help="Format output in plain text (default)",
@@ -810,7 +811,7 @@ def log(
 
 
 @cli.command(context_settings={"ignore_unknown_options": True})
-@click.argument("frame_id", required=False, autocompletion=get_frames)
+@click.argument("frame_id", required=False, shell_complete=get_frames)
 @click.pass_obj
 @catch_timetracker_error
 def edit(timetracker, frame_id):

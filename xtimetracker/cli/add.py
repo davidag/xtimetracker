@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 @cli.command(context_settings={"ignore_unknown_options": True})
-@click.argument("args", nargs=-1, autocompletion=get_project_or_tag_completion)
+@click.argument("args", nargs=-1, shell_complete=get_project_or_tag_completion)
 @click.option(
     "-f",
     "--from",

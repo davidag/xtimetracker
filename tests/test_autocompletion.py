@@ -119,21 +119,3 @@ def test_completion_of_existing_prefix(
     ret_set = set(func_to_test(ctx, args, prefix))
     assert len(ret_set) == n_expected_vals
     assert all(cur_elem.startswith(prefix) for cur_elem in ret_set)
-
-
-@pytest.mark.parametrize(
-    "func", [get_projects, get_tags, get_frames, get_project_or_tag_completion]
-)
-def test_timetracker_object_gets_created_if_empty_with_positional_args(func):
-    ctx = ClickContext(obj=None)
-    func(ctx, [], "")
-    assert isinstance(ctx.obj, TimeTracker)
-
-
-@pytest.mark.parametrize(
-    "func", [get_projects, get_tags, get_frames, get_project_or_tag_completion]
-)
-def test_timetracker_object_gets_created_if_empty_with_keyword_args(func):
-    ctx = ClickContext(obj=None)
-    func(ctx=ctx, args=[], incomplete="")
-    assert isinstance(ctx.obj, TimeTracker)
