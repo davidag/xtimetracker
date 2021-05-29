@@ -17,7 +17,6 @@ from xtimetracker.cli.autocompletion import (
     get_projects,
     get_tags,
 )
-from xtimetracker.timetracker import TimeTracker
 
 from . import TEST_FIXTURE_DIR
 

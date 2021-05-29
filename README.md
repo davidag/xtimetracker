@@ -74,6 +74,10 @@ Options:
 
 This command stops the tracking in progress, if there is any.
 
+### `x cancel`
+
+This command cancels the tracking in progress, if there is any.
+
 ## License
 
 Copyright (C) 2021 David Alfonso

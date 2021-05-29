@@ -9,6 +9,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 ## [x.y.z] - yyyy-mm-dd
 
 ### Added
+- Add `cancel` command to cancel the tracking in progress
 - Support generating `fish` autocompletion script with `make fish`
 
 ### Changed

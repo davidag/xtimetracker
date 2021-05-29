@@ -9,6 +9,7 @@ import re
 from itertools import combinations
 from datetime import datetime, timedelta
 from dateutil.tz import tzlocal
+from freezegun import freeze_time
 
 import arrow
 import pytest
@@ -363,6 +364,18 @@ def test_start_restart_latest_frame_from_non_running_project(runner, timetracker
     assert result.exit_code == 0
     assert timetracker_df.current["project"] == "hubble"
     assert {"transmission", "camera"} == set(timetracker_df.current["tags"])
+
+
+# cancel
+
+
+@freeze_time("12:00:00", auto_tick_seconds=60)
+@pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
+def test_cancel(runner, timetracker_df):
+    runner.invoke(cli.start, ["hubble"], obj=timetracker_df)
+    runner.invoke(cli.status, obj=timetracker_df)
+    result = runner.invoke(cli.cancel, obj=timetracker_df)
+    assert result.output == "Canceled tracking: hubble, started 2 minutes ago"
 
 
 # add
