@@ -35,7 +35,6 @@ from .utils import (
     format_timedelta,
     frames_to_csv,
     frames_to_json,
-    get_frame_from_argument,
     get_start_time_for_period,
     style,
     parse_date,
@@ -830,7 +829,7 @@ def edit(timetracker, frame_id):
     to `vim`, `nano`, or `vi` (first one found) on all other systems.
     """
     if frame_id:
-        frame = get_frame_from_argument(timetracker, frame_id)
+        frame = timetracker.frames(frame_id)
         frame_id = frame.id
     elif timetracker.is_started:
         frame = Frame(

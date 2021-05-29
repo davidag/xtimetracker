@@ -15,7 +15,6 @@ from .stop import stop
 from .utils import (
     DateTime,
     catch_timetracker_error,
-    get_frame_from_argument,
     style,
     parse_project,
     parse_tags,
@@ -99,7 +98,7 @@ def start(ctx, tt: TimeTracker, stretch, from_, restart, args):
             project = tt.current["project"]
             tags += tt.current["tags"]
         else:
-            frame = get_frame_from_argument(tt, "-1")
+            frame = tt.frames(-1)
             if frame:
                 project = frame["project"]
                 tags += frame["tags"]

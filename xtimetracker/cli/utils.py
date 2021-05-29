@@ -176,37 +176,6 @@ def options(opt_list):
     return value_proc
 
 
-# [refactor] - get_frame_from_argument: put into TT (maybe extending frames()?)
-def get_frame_from_argument(timetracker: TimeTracker, arg):
-    """
-    Get a frame from a command line argument which can either be a
-    position index (-1) or a frame id.
-    """
-    # first we try to see if we are refering to a frame by
-    # its position (for example -2). We only take negative indexes
-    # as a positive index might also be an existing id
-    try:
-        index = int(arg)
-        if index < 0:
-            return timetracker.frames(index)
-    except IndexError:
-        raise click.ClickException(
-            style("error", "No frame found for index {}.".format(arg))
-        )
-    except (ValueError, TypeError):
-        pass
-
-    # if we didn't find a frame by position, we try by id
-    try:
-        return timetracker.frames(arg)
-    except KeyError:
-        raise click.ClickException(
-            "{} {}.".format(
-                style("error", "No frame found with id"), style("short_id", arg)
-            )
-        )
-
-
 def get_start_time_for_period(period):
     # Using now() from datetime instead of arrow for mocking compatibility.
     now = arrow.Arrow.fromdatetime(datetime.datetime.now())

@@ -44,7 +44,24 @@ class TimeTracker:
     def frames(self, key: Optional[Union[int, str]] = None, **filters):
         """Returns the frame or frames given by key or filters."""
         if key is not None:
-            return self._frames[key]
+            # first we try to see if we are refering to a frame by
+            # its position (for example -2). We only take negative indexes
+            # as a positive index might also be an existing id
+            try:
+                index = int(key)
+                if index < 0:
+                    return self._frames[index]
+            except IndexError:
+                raise TimeTrackerError(f"No frame found for index '{key}'")
+            except (ValueError, TypeError):
+                pass
+
+            # if we didn't find a frame by position, we try by id
+            try:
+                return self._frames[key]
+            except KeyError:
+                raise TimeTrackerError(f"No frame found with id '{key}'")
+
         return self._frames.filter(**filters)
 
     def count(self):
