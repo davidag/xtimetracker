@@ -45,14 +45,18 @@ Tuesday 26 January 2020 (8m 32s)
 
 To list all available commands use:
 ```console
-$ x help
+$ x --help
 ```
 
 ## Commands
 
-### `x help`
+You can find detailed information for each command using `-h/--help` after a command (e.g. `x start -h`).
 
-Show a list of available commands with a short description. You can find detailed information for each command using the `--help` optionafter a command (e.g. `x start --help`).
+You can find a list of available commands with `x -h` or `x --help`.
+
+### `x`
+
+`x` shows the status of the time tracker, i.e. tracked activity, tags and elapsed time.
 
 ### `x start`
 
@@ -65,6 +69,10 @@ Options:
 - `--stretch, -s`: Stretch start time to continue just after last tracked activity.
 
 - `--restart, -r`: If a project is provided, the last tags used with it will be automatically added. If no project is provided, the last tracked project and tags will be used.
+
+### `x stop`
+
+This command stops the tracking in progress, if there is any.
 
 ## License
 
