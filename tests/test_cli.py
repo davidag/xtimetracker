@@ -13,7 +13,7 @@ from dateutil.tz import tzlocal
 import arrow
 import pytest
 
-from xtimetracker.cli import cli, start, stop
+import xtimetracker.cli as cli
 
 from . import TEST_FIXTURE_DIR
 
@@ -99,10 +99,10 @@ class OutputParser:
 
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
 def test_start_doesnt_support_frame_references(runner, timetracker_df):
-    result = runner.invoke(start, ["-1"], obj=timetracker_df)
+    result = runner.invoke(cli.start, ["-1"], obj=timetracker_df)
     assert result.exit_code == 2  # -1 option not allowed
     frame = timetracker_df.frames["e935a543"]
-    result = runner.invoke(start, [str(frame.id)], obj=timetracker_df)
+    result = runner.invoke(cli.start, [str(frame.id)], obj=timetracker_df)
     assert result.exit_code == 0
     assert frame.project not in result.output
     assert "e935a543" in result.output
@@ -118,9 +118,9 @@ def test_start_doesnt_support_frame_references(runner, timetracker_df):
 def test_start_with_already_started_project(runner, timetracker, stop_cfg, error):
     timetracker.config.set("options", "stop_on_start", str(stop_cfg))
     assert timetracker.config.getboolean("options", "stop_on_start") == stop_cfg
-    result = runner.invoke(start, "project-1", obj=timetracker)
+    result = runner.invoke(cli.start, "project-1", obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(start, ["project-2"], obj=timetracker)
+    result = runner.invoke(cli.start, ["project-2"], obj=timetracker)
     if error:
         assert result.exit_code == 1
         assert "Error" in result.output
@@ -148,18 +148,20 @@ def test_start_stretching_start_date(
         2019, 4, 1, 14, 0, 0, tzinfo=tzlocal()
     )
     # Start and stop previous activity (with a duration of 30 minutes))
-    result = runner.invoke(start, ["project-1", "+tag1"], obj=timetracker)
+    result = runner.invoke(cli.start, ["project-1", "+tag1"], obj=timetracker)
     assert result.exit_code == 0
     arrow.arrow.datetime.now.return_value = datetime(
         2019, 4, 1, 14, 30, 0, tzinfo=tzlocal()
     )
-    result = runner.invoke(stop, obj=timetracker)
+    result = runner.invoke(cli.stop, obj=timetracker)
     assert result.exit_code == 0
     # Start a new activity half hour later
     arrow.arrow.datetime.now.return_value = datetime(
         2019, 4, 1, 15, 0, 0, tzinfo=tzlocal()
     )
-    result = runner.invoke(start, [stretch_opt, "project-2", "+tag2"], obj=timetracker)
+    result = runner.invoke(
+        cli.start, [stretch_opt, "project-2", "+tag2"], obj=timetracker
+    )
     assert result.exit_code == 0
     if stretch_opt or stretch_cfg:
         assert timetracker.current["start"].datetime == datetime(
@@ -191,14 +193,14 @@ def test_start_stretching_previous_day(
     fixed_dt = datetime(2019, 4, 1, 14, 0, 0, tzinfo=tzlocal())
     arrow.arrow.datetime.now.return_value = fixed_dt
     # Start and stop previous activity (with a duration of 30 minutes))
-    result = runner.invoke(start, ["project-1", "+tag1"], obj=timetracker)
+    result = runner.invoke(cli.start, ["project-1", "+tag1"], obj=timetracker)
     assert result.exit_code == 0
     arrow.arrow.datetime.now.return_value += timedelta(minutes=30)
-    result = runner.invoke(stop, obj=timetracker)
+    result = runner.invoke(cli.stop, obj=timetracker)
     assert result.exit_code == 0
     # Start a new activity on a different day
     arrow.arrow.datetime.now.return_value += timedelta(seconds=elapsed_secs)
-    result = runner.invoke(start, ["project-2", "+tag2"], obj=timetracker)
+    result = runner.invoke(cli.start, ["project-2", "+tag2"], obj=timetracker)
     assert result.exit_code == 0
     if stretched:
         assert timetracker.current["start"].datetime == fixed_dt + timedelta(
@@ -212,10 +214,10 @@ def test_start_stretching_previous_day(
 
 def test_start_restart_running_frame(runner, timetracker):
     timetracker.config.set("options", "stop_on_start", "true")
-    result = runner.invoke(start, ["project-1", "+mytag"], obj=timetracker)
+    result = runner.invoke(cli.start, ["project-1", "+mytag"], obj=timetracker)
     assert result.exit_code == 0
     assert len(timetracker.frames) == 0
-    result = runner.invoke(start, ["-r"], obj=timetracker)
+    result = runner.invoke(cli.start, ["-r"], obj=timetracker)
     assert result.exit_code == 0
     assert len(timetracker.frames) == 1
     assert timetracker.current["project"] == "project-1"
@@ -224,10 +226,10 @@ def test_start_restart_running_frame(runner, timetracker):
 
 def test_start_restart_running_frame_plus_tags(runner, timetracker):
     timetracker.config.set("options", "stop_on_start", "true")
-    result = runner.invoke(start, ["project-1", "+tag1"], obj=timetracker)
+    result = runner.invoke(cli.start, ["project-1", "+tag1"], obj=timetracker)
     assert result.exit_code == 0
     assert len(timetracker.frames) == 0
-    result = runner.invoke(start, ["-r", "+tag2", "+a tag"], obj=timetracker)
+    result = runner.invoke(cli.start, ["-r", "+tag2", "+a tag"], obj=timetracker)
     assert result.exit_code == 0
     assert timetracker.current["project"] == "project-1"
     assert len(timetracker.frames) == 1
@@ -236,11 +238,11 @@ def test_start_restart_running_frame_plus_tags(runner, timetracker):
 
 def test_start_restart_latest_frame(runner, timetracker):
     timetracker.config.set("options", "stop_on_start", "false")
-    result = runner.invoke(start, "project-1", obj=timetracker)
+    result = runner.invoke(cli.start, "project-1", obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(stop, obj=timetracker)
+    result = runner.invoke(cli.stop, obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(start, ["-r"], obj=timetracker)
+    result = runner.invoke(cli.start, ["-r"], obj=timetracker)
     assert result.exit_code == 0
     assert timetracker.current["project"] == "project-1"
     assert len(timetracker.frames) == 1
@@ -248,11 +250,11 @@ def test_start_restart_latest_frame(runner, timetracker):
 
 def test_start_restart_last_frame_plus_tags(runner, timetracker):
     timetracker.config.set("options", "stop_on_start", "false")
-    result = runner.invoke(start, ["project-2", "+tag2"], obj=timetracker)
+    result = runner.invoke(cli.start, ["project-2", "+tag2"], obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(stop, obj=timetracker)
+    result = runner.invoke(cli.stop, obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(start, ["-r", "+tag3"], obj=timetracker)
+    result = runner.invoke(cli.start, ["-r", "+tag3"], obj=timetracker)
     assert result.exit_code == 0
     assert len(timetracker.frames) == 1
     assert timetracker.current["project"] == "project-2"
@@ -269,7 +271,7 @@ def test_start_restart_last_project_frame(runner, timetracker):
         cli.add, ["-f 08:00", "-t 09:00", "project-1", "+mytag2"], obj=timetracker
     )
     assert result.exit_code == 0
-    result = runner.invoke(start, ["-r", "project-1"], obj=timetracker)
+    result = runner.invoke(cli.start, ["-r", "project-1"], obj=timetracker)
     assert result.exit_code == 0
     assert timetracker.current["project"] == "project-1"
     assert {"mytag1"} == set(timetracker.current["tags"])
@@ -285,7 +287,7 @@ def test_start_restart_last_project_frame_plus_tags(runner, timetracker):
         cli.add, ["-f 08:00", "-t 09:00", "project-1", "+mytag2"], obj=timetracker
     )
     assert result.exit_code == 0
-    result = runner.invoke(start, ["-r", "project-1", "+tagA"], obj=timetracker)
+    result = runner.invoke(cli.start, ["-r", "project-1", "+tagA"], obj=timetracker)
     assert result.exit_code == 0
     assert timetracker.current["project"] == "project-1"
     assert {"tagA", "mytag1"} == set(timetracker.current["tags"])
@@ -293,16 +295,16 @@ def test_start_restart_last_project_frame_plus_tags(runner, timetracker):
 
 def test_start_restart_new_project_does_not_fail(runner, timetracker):
     timetracker.config.set("options", "restart_on_start", "true")
-    runner.invoke(start, ["project-1"], obj=timetracker)
+    runner.invoke(cli.start, ["project-1"], obj=timetracker)
     assert timetracker.current["project"] == "project-1"
 
 
 def test_start_restart_config_current_project_explicit_new_tags(runner, timetracker):
     timetracker.config.set("options", "restart_on_start", "true")
     timetracker.config.set("options", "stop_on_start", "true")
-    result = runner.invoke(start, ["project-1", "+tag1"], obj=timetracker)
+    result = runner.invoke(cli.start, ["project-1", "+tag1"], obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(start, ["project-1", "+tag2"], obj=timetracker)
+    result = runner.invoke(cli.start, ["project-1", "+tag2"], obj=timetracker)
     assert result.exit_code == 0
     assert timetracker.current["project"] == "project-1"
     assert set(["tag1", "tag2"]) == set(timetracker.current["tags"])
@@ -311,9 +313,9 @@ def test_start_restart_config_current_project_explicit_new_tags(runner, timetrac
 def test_start_restart_config_current_project_explicit(runner, timetracker):
     timetracker.config.set("options", "restart_on_start", "true")
     timetracker.config.set("options", "stop_on_start", "true")
-    result = runner.invoke(start, ["project-1", "+tag1", "+tag2"], obj=timetracker)
+    result = runner.invoke(cli.start, ["project-1", "+tag1", "+tag2"], obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(start, ["project-1"], obj=timetracker)
+    result = runner.invoke(cli.start, ["project-1"], obj=timetracker)
     assert result.exit_code == 0
     assert timetracker.current["project"] == "project-1"
     assert set(["tag1", "tag2"]) == set(timetracker.current["tags"])
@@ -322,9 +324,9 @@ def test_start_restart_config_current_project_explicit(runner, timetracker):
 def test_start_restart_config_current_project_and_tags_implicit(runner, timetracker):
     timetracker.config.set("options", "restart_on_start", "true")
     timetracker.config.set("options", "stop_on_start", "true")
-    result = runner.invoke(start, ["project-1", "+tag1"], obj=timetracker)
+    result = runner.invoke(cli.start, ["project-1", "+tag1"], obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(start, [], obj=timetracker)
+    result = runner.invoke(cli.start, [], obj=timetracker)
     assert result.exit_code == 0
     assert timetracker.current["project"] == "project-1"
     assert ["tag1"] == timetracker.current["tags"]
@@ -333,9 +335,9 @@ def test_start_restart_config_current_project_and_tags_implicit(runner, timetrac
 def test_start_restart_config_current_project_implicit_same_tags(runner, timetracker):
     timetracker.config.set("options", "restart_on_start", "true")
     timetracker.config.set("options", "stop_on_start", "true")
-    result = runner.invoke(start, ["project-1", "+tag1"], obj=timetracker)
+    result = runner.invoke(cli.start, ["project-1", "+tag1"], obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(start, ["+tag1"], obj=timetracker)
+    result = runner.invoke(cli.start, ["+tag1"], obj=timetracker)
     assert result.exit_code == 0
     assert timetracker.current["project"] == "project-1"
     assert ["tag1"] == timetracker.current["tags"]
@@ -344,7 +346,7 @@ def test_start_restart_config_current_project_implicit_same_tags(runner, timetra
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
 def test_start_restart_latest_frame_with_stop_on_start(runner, timetracker_df):
     timetracker_df.config.set("options", "stop_on_start", "true")
-    result = runner.invoke(start, ["hubble", "-r"], obj=timetracker_df)
+    result = runner.invoke(cli.start, ["hubble", "-r"], obj=timetracker_df)
     assert result.exit_code == 0
     assert timetracker_df.current["project"] == "hubble"
     assert {"transmission", "camera"} == set(timetracker_df.current["tags"])
@@ -353,9 +355,11 @@ def test_start_restart_latest_frame_with_stop_on_start(runner, timetracker_df):
 @pytest.mark.datafiles(TEST_FIXTURE_DIR / "sample_data")
 def test_start_restart_latest_frame_from_non_running_project(runner, timetracker_df):
     timetracker_df.config.set("options", "stop_on_start", "true")
-    result = runner.invoke(start, ["voyager1", "+lens", "+reactor"], obj=timetracker_df)
+    result = runner.invoke(
+        cli.start, ["voyager1", "+lens", "+reactor"], obj=timetracker_df
+    )
     assert result.exit_code == 0
-    result = runner.invoke(start, ["hubble", "-r"], obj=timetracker_df)
+    result = runner.invoke(cli.start, ["hubble", "-r"], obj=timetracker_df)
     assert result.exit_code == 0
     assert timetracker_df.current["project"] == "hubble"
     assert {"transmission", "camera"} == set(timetracker_df.current["tags"])
@@ -443,7 +447,7 @@ def test_aggregate_include_current(runner, timetracker_df, mocker):
     mocker.patch("arrow.arrow.datetime", wraps=datetime)
     start_dt = datetime(2019, 11, 1, 0, 0, 0, tzinfo=tzlocal())
     arrow.arrow.datetime.now.return_value = start_dt
-    result = runner.invoke(start, ["a-project"], obj=timetracker_df)
+    result = runner.invoke(cli.start, ["a-project"], obj=timetracker_df)
     assert result.exit_code == 0
     # Simulate one hour has elapsed so that the current frame lasts exactly
     # one hour.
@@ -464,7 +468,7 @@ def test_aggregate_dont_include_current(runner, timetracker_df, mocker):
     mocker.patch("arrow.arrow.datetime", wraps=datetime)
     start_dt = datetime(2019, 11, 1, 0, 0, 0, tzinfo=tzlocal())
     arrow.arrow.datetime.now.return_value = start_dt
-    result = runner.invoke(start, ["a-project"], obj=timetracker_df)
+    result = runner.invoke(cli.start, ["a-project"], obj=timetracker_df)
     assert result.exit_code == 0
     # Simulate one hour has elapsed so that the current frame lasts exactly
     # one hour.
@@ -482,7 +486,7 @@ def test_aggregate_dont_include_current(runner, timetracker_df, mocker):
 
 @pytest.mark.parametrize("cmd", [cli.aggregate, cli.log, cli.report])
 def test_incompatible_options(runner, timetracker, cmd):
-    name_interval_options = ["--" + s for s in cli._SHORTCUT_OPTIONS]
+    name_interval_options = ["--" + s for s in cli.SHORTCUT_OPTIONS]
     for opt1, opt2 in combinations(name_interval_options, 2):
         result = runner.invoke(cmd, [opt1, opt2], obj=timetracker)
         assert result.exit_code != 0

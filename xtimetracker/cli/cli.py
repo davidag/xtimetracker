@@ -16,15 +16,15 @@ from dateutil import tz
 from .. import __version__
 from .autocompletion import (
     get_frames,
-    get_project_or_tag_completion,
     get_projects,
     get_tags,
 )
 from ..file_utils import safe_save
 from ..frames import Frame
+from .constants import SHORTCUT_OPTIONS
 from .utils import (
+    DateTime,
     adjusted_span,
-    apply_weekday_offset,
     build_csv,
     build_json,
     catch_timetracker_error,
@@ -39,8 +39,6 @@ from .utils import (
     get_start_time_for_period,
     style,
     parse_date,
-    parse_project,
-    parse_tags,
 )
 from ..utils import sorted_groupby
 
@@ -75,47 +73,6 @@ class MutuallyExclusiveOption(click.Option):
         )
 
 
-class DateTimeParamType(click.ParamType):
-    name = "datetime"
-
-    def convert(self, value, param, ctx):
-        if value:
-            date = self._parse_multiformat(value)
-            if date is None:
-                raise click.UsageError(
-                    "Could not match value '{}' to any supported date format".format(
-                        value
-                    )
-                )
-            # Add an offset to match the week beginning specified in the
-            # configuration
-            if param.name == "week":
-                week_start = ctx.obj.config.get("options", "week_start", "monday")
-                date = apply_weekday_offset(start_time=date, week_start=week_start)
-            return date
-
-    def _parse_multiformat(self, value) -> arrow.Arrow:
-        date = None
-        for fmt in (None, "HH:mm:ss", "HH:mm"):
-            try:
-                if fmt is None:
-                    # -> try to parse value as ISO-8601 string as local tz
-                    date = arrow.get(value, tzinfo=tz.tzlocal())
-                else:
-                    date = arrow.get(value, fmt)
-                    # -> arrow.now() returns the current time in local tz, then replace h:m:s
-                    date = arrow.now().replace(
-                        hour=date.hour, minute=date.minute, second=date.second
-                    )
-                break
-            except (ValueError, TypeError):
-                pass
-        return date
-
-
-DateTime = DateTimeParamType()
-
-
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 
@@ -136,53 +93,7 @@ def cli(ctx):
         ctx.invoke(status)
 
 
-@cli.command(context_settings={"ignore_unknown_options": True})
-@click.argument("args", nargs=-1, autocompletion=get_project_or_tag_completion)
-@click.option(
-    "-f",
-    "--from",
-    "from_",
-    required=True,
-    type=DateTime,
-    help="Date and time of start of tracked activity",
-)
-@click.option(
-    "-t",
-    "--to",
-    required=True,
-    type=DateTime,
-    help="Date and time of end of tracked activity",
-)
-@click.pass_obj
-@catch_timetracker_error
-def add(timetracker, args, from_, to):
-    """
-    Add time to a project with tag(s) that was not tracked live.
-    """
-    project = parse_project(args)
-    if not project:
-        raise click.ClickException("No project given.")
-
-    # Parse all the tags
-    tags = parse_tags(args)
-
-    # add a new frame, call timetracker save to update state files
-    frame = timetracker.add(project=project, tags=tags, from_date=from_, to_date=to)
-
-    click.echo(
-        "Adding project {}{}, started {} and stopped {}. (id: {})".format(
-            style("project", frame.project),
-            (" " if frame.tags else "") + style("tags", frame.tags),
-            style("time", frame.start.humanize()),
-            style("time", frame.stop.humanize()),
-            style("short_id", frame.id),
-        )
-    )
-    timetracker.save()
-
-
-_SHORTCUT_OPTIONS = ["full", "year", "month", "week", "day"]
-_SHORTCUT_OPTIONS_VALUES = {k: get_start_time_for_period(k) for k in _SHORTCUT_OPTIONS}
+_SHORTCUT_OPTIONS_VALUES = {k: get_start_time_for_period(k) for k in SHORTCUT_OPTIONS}
 
 
 @cli.command()
@@ -200,7 +111,7 @@ _SHORTCUT_OPTIONS_VALUES = {k: get_start_time_for_period(k) for k in _SHORTCUT_O
     cls=MutuallyExclusiveOption,
     type=DateTime,
     default=arrow.now().shift(days=-7),
-    mutually_exclusive=_SHORTCUT_OPTIONS,
+    mutually_exclusive=SHORTCUT_OPTIONS,
     help="Report start date. Default: 7 days ago.",
 )
 @click.option(
@@ -209,7 +120,7 @@ _SHORTCUT_OPTIONS_VALUES = {k: get_start_time_for_period(k) for k in _SHORTCUT_O
     cls=MutuallyExclusiveOption,
     type=DateTime,
     default=arrow.now(),
-    mutually_exclusive=_SHORTCUT_OPTIONS,
+    mutually_exclusive=SHORTCUT_OPTIONS,
     help="Report stop date (inclusive). Default: tomorrow.",
 )
 @click.option(
@@ -504,7 +415,7 @@ def report(
     cls=MutuallyExclusiveOption,
     type=DateTime,
     default=arrow.now().shift(days=-7),
-    mutually_exclusive=_SHORTCUT_OPTIONS,
+    mutually_exclusive=SHORTCUT_OPTIONS,
     help="Report start date. Default: 7 days ago.",
 )
 @click.option(
@@ -513,7 +424,7 @@ def report(
     cls=MutuallyExclusiveOption,
     type=DateTime,
     default=arrow.now(),
-    mutually_exclusive=_SHORTCUT_OPTIONS,
+    mutually_exclusive=SHORTCUT_OPTIONS,
     help="Report stop date (inclusive). Default: tomorrow.",
 )
 @click.option(

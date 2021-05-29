@@ -24,6 +24,47 @@ from ..timetracker import TimeTrackerError, TimeTracker
 from ..config import Config
 
 
+class DateTimeParamType(click.ParamType):
+    name = "datetime"
+
+    def convert(self, value, param, ctx):
+        if value:
+            date = self._parse_multiformat(value)
+            if date is None:
+                raise click.UsageError(
+                    "Could not match value '{}' to any supported date format".format(
+                        value
+                    )
+                )
+            # Add an offset to match the week beginning specified in the
+            # configuration
+            if param.name == "week":
+                week_start = ctx.obj.config.get("options", "week_start", "monday")
+                date = apply_weekday_offset(start_time=date, week_start=week_start)
+            return date
+
+    def _parse_multiformat(self, value) -> arrow.Arrow:
+        date = None
+        for fmt in (None, "HH:mm:ss", "HH:mm"):
+            try:
+                if fmt is None:
+                    # -> try to parse value as ISO-8601 string as local tz
+                    date = arrow.get(value, tzinfo=tz.tzlocal())
+                else:
+                    date = arrow.get(value, fmt)
+                    # -> arrow.now() returns the current time in local tz, then replace h:m:s
+                    date = arrow.now().replace(
+                        hour=date.hour, minute=date.minute, second=date.second
+                    )
+                break
+            except (ValueError, TypeError):
+                pass
+        return date
+
+
+DateTime = DateTimeParamType()
+
+
 def catch_timetracker_error(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
