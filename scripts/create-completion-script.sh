@@ -47,6 +47,10 @@ case $1 in
     src_command="zsh_source"
     dst_script="x.zsh-completion"
     ;;
+  fish)
+    src_command="fish_source"
+    dst_script="x.fish"
+    ;;
   *)
     echo "Unknown argument '$1'. Please consult help text." >&2
     exit 1

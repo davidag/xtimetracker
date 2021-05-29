@@ -10,3 +10,12 @@ lint:  ## Lint and static-check
 
 tox:  ## Run tox
 	python -m tox
+
+bash:  ## Create completion file for bash
+	scripts/create-completion-script.sh bash
+
+zsh:  ## Create completion file for zsh
+	scripts/create-completion-script.sh zsh
+
+fish:  ## Create completion file for fish
+	scripts/create-completion-script.sh fish
