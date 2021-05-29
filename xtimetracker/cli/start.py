@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2015-2019 Tailordev
-# SPDX-FileCopyrightText: 2021 David Alfonso
+# SPDX-FileCopyrightText: 2020-2021 David Alfonso
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-License-Identifier: MIT
@@ -10,11 +10,11 @@ import click
 from typing import TYPE_CHECKING
 
 from .autocompletion import get_project_or_tag_completion
-from .cli import cli, stop
+from .cli import cli
+from .stop import stop
 from .utils import (
     catch_timetracker_error,
     get_frame_from_argument,
-    get_start_time_for_period,
     style,
     parse_project,
     parse_tags,

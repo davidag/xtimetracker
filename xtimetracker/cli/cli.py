@@ -135,35 +135,6 @@ def cli(ctx):
         ctx.invoke(status)
 
 
-@cli.command(context_settings={'ignore_unknown_options': True})
-@click.option('-c', '--cancel', is_flag=True, default=False,
-              help="Cancel current project monitoring.")
-@click.pass_obj
-@catch_timetracker_error
-def stop(timetracker, cancel):
-    """
-    Stop or cancel monitoring time for the current project.
-    """
-    if cancel:
-        old = timetracker.cancel()
-        click.echo("Canceling current monitoring for project {}{}".format(
-            style('project', old['project']),
-            (" " if old['tags'] else "") + style('tags', old['tags'])
-        ))
-    else:
-        frame = timetracker.stop()
-        output_str = "Stopping project {}{}, started {} and stopped {}. (id: {})"
-        click.echo(output_str.format(
-            style('project', frame.project),
-            (" " if frame.tags else "") + style('tags', frame.tags),
-            # -> Arrow.humanize() just to output start/stop datetimes...
-            style('time', frame.start.humanize()),
-            style('time', frame.stop.humanize()),
-            style('short_id', frame.id),
-        ))
-    timetracker.save()
-
-
 @cli.command(hidden=True)
 @click.option('-p', '--project', is_flag=True,
               help="only output project")

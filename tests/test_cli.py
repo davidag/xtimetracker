@@ -13,8 +13,7 @@ from dateutil.tz import tzlocal
 import arrow
 import pytest
 
-from xtimetracker.cli import cli
-from xtimetracker.cli.start import start
+from xtimetracker.cli import cli, start, stop
 
 from . import TEST_FIXTURE_DIR
 
@@ -158,7 +157,7 @@ def test_start_stretching_start_date(runner, timetracker, mocker, stretch_opt, s
     result = runner.invoke(start, ['project-1', '+tag1'], obj=timetracker)
     assert result.exit_code == 0
     arrow.arrow.datetime.now.return_value = datetime(2019, 4, 1, 14, 30, 0, tzinfo=tzlocal())
-    result = runner.invoke(cli.stop, obj=timetracker)
+    result = runner.invoke(stop, obj=timetracker)
     assert result.exit_code == 0
     # Start a new activity half hour later
     arrow.arrow.datetime.now.return_value = datetime(2019, 4, 1, 15, 0, 0, tzinfo=tzlocal())
@@ -192,7 +191,7 @@ def test_start_stretching_previous_day(runner, timetracker, mocker, elapsed_secs
     result = runner.invoke(start, ['project-1', '+tag1'], obj=timetracker)
     assert result.exit_code == 0
     arrow.arrow.datetime.now.return_value += timedelta(minutes=30)
-    result = runner.invoke(cli.stop, obj=timetracker)
+    result = runner.invoke(stop, obj=timetracker)
     assert result.exit_code == 0
     # Start a new activity on a different day
     arrow.arrow.datetime.now.return_value += timedelta(seconds=elapsed_secs)
@@ -235,7 +234,7 @@ def test_start_restart_latest_frame(runner, timetracker):
     timetracker.config.set('options', 'stop_on_start', "false")
     result = runner.invoke(start, 'project-1', obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(cli.stop, obj=timetracker)
+    result = runner.invoke(stop, obj=timetracker)
     assert result.exit_code == 0
     result = runner.invoke(start, ['-r'], obj=timetracker)
     assert result.exit_code == 0
@@ -247,7 +246,7 @@ def test_start_restart_last_frame_plus_tags(runner, timetracker):
     timetracker.config.set('options', 'stop_on_start', "false")
     result = runner.invoke(start, ['project-2', '+tag2'], obj=timetracker)
     assert result.exit_code == 0
-    result = runner.invoke(cli.stop, obj=timetracker)
+    result = runner.invoke(stop, obj=timetracker)
     assert result.exit_code == 0
     result = runner.invoke(start, ['-r', '+tag3'], obj=timetracker)
     assert result.exit_code == 0

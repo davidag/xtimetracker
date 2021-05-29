@@ -2,4 +2,6 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from . import cli, start
+from . import cli
+from .start import start
+from .stop import stop
